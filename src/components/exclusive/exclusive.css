@@ -1,0 +1,137 @@
+/* Modulo isolato: Tessera Membro + Gift Card. Rimuovibile in blocco. */
+
+.pass-stage {
+  perspective: 1400px;
+}
+
+.pass-card {
+  position: relative;
+  aspect-ratio: 1.6 / 1;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--foreground) 22%, transparent);
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklab, var(--card) 96%, var(--foreground) 4%) 0%,
+      color-mix(in oklab, var(--secondary) 70%, var(--card) 30%) 38%,
+      color-mix(in oklab, var(--card) 92%, transparent) 62%,
+      color-mix(in oklab, var(--accent) 24%, var(--card) 76%) 100%);
+  box-shadow:
+    0 26px 60px -30px color-mix(in oklab, var(--foreground) 45%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--card) 90%, transparent);
+  transform: rotateX(var(--px, 0deg)) rotateY(var(--py, 0deg));
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.pass-card::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in oklab, var(--card) 88%, transparent) 47%,
+    color-mix(in oklab, var(--accent) 45%, transparent) 50%,
+    color-mix(in oklab, var(--card) 88%, transparent) 53%,
+    transparent 62%
+  );
+  transform: translateX(calc(var(--shine, 0) * 1%));
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.pass-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    115deg,
+    color-mix(in oklab, var(--foreground) 5%, transparent) 0 1px,
+    transparent 1px 7px
+  );
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pass-chip {
+  width: 2.6rem;
+  height: 1.9rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 28%, transparent);
+  background: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--accent) 60%, var(--card)) 0%,
+    color-mix(in oklab, var(--card) 85%, transparent) 55%,
+    color-mix(in oklab, var(--accent) 45%, var(--card)) 100%
+  );
+}
+
+.pass-mono {
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 1px 0 color-mix(in oklab, var(--card) 85%, transparent),
+    0 -1px 0 color-mix(in oklab, var(--foreground) 25%, transparent);
+}
+
+.tier-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 35%, transparent);
+  transition: background-color 400ms ease, transform 400ms ease;
+}
+
+.tier-dot[data-filled="true"] {
+  background: var(--accent);
+  transform: scale(1.25);
+}
+
+.gift-paper {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 90% at 10% 0%, color-mix(in oklab, var(--card) 96%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in oklab, var(--card) 98%, transparent), color-mix(in oklab, var(--secondary) 45%, var(--card)));
+  box-shadow: 0 22px 50px -32px color-mix(in oklab, var(--foreground) 40%, transparent);
+}
+
+.gift-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0.65rem;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  pointer-events: none;
+}
+
+.gift-option {
+  transition: border-color 300ms ease, transform 300ms ease, background-color 300ms ease;
+}
+
+.gift-option[data-active="true"] {
+  border-color: color-mix(in oklab, var(--accent) 80%, transparent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  transform: translateY(-2px);
+}
+
+.gift-seal {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  background: radial-gradient(circle at 35% 30%, color-mix(in oklab, var(--accent) 45%, var(--card)), color-mix(in oklab, var(--secondary) 60%, var(--card)));
+  animation: seal-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes seal-in {
+  from { transform: scale(0.75) rotate(-12deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pass-card,
+  .gift-option,
+  .tier-dot { transition: none; }
+  .gift-seal { animation: none; }
+  .pass-card::before { display: none; }
+}

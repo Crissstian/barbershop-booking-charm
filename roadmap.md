@@ -39,3 +39,7 @@
 - [x] Conservare fotografia editoriale e ritmo cinematografico
 - [x] Rendere l’ingresso più epico con veli, luce e apertura teatrale
 - [x] Verificare resa mobile e desktop
+
+## Checkpoint rimovibile — Tessera Membro & Gift Card
+- [x] Pagina /esclusiva con tessera membro interattiva e configuratore gift card
+- Per rimuovere tutto: elimina src/routes/esclusiva.tsx e src/components/exclusive/, e togli il link "Membership" nell'header di src/routes/index.tsx

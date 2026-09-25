@@ -57,8 +57,12 @@ function Home() {
 
       <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-border/40 bg-background/70 px-6 py-5 backdrop-blur-xl">
         <Link to="/" className="font-serif text-xl">NDP</Link>
-        <Link to="/admin" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent">Area staff</Link>
+        <div className="flex items-center gap-5">
+          <Link to="/esclusiva" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent">Membership</Link>
+          <Link to="/admin" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent">Area staff</Link>
+        </div>
       </header>
+
 
       <section className="hero-scene relative flex min-h-[92svh] flex-col items-center justify-end overflow-hidden px-6 pb-24 pt-20 text-center">
         <img src={salonHero} alt="Interni luminosi di NDP Esclusive Hair Saloon" width={1200} height={1600} className="hero-image absolute inset-0 h-full w-full object-cover object-center" />

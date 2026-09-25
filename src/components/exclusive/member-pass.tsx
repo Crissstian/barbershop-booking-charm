@@ -12,7 +12,7 @@ export function MemberPass() {
   const [visits, setVisits] = useState(3);
   const ref = useRef<HTMLDivElement>(null);
 
-  const tier = [...TIERS].reverse().find((t) => visits >= t.visits) ?? TIERS[0];
+  const tier = [...TIERS].reverse().find((t) => visits >= t.visits) ?? { name: "Ospite", visits: 0 };
   const displayName = name.trim() || "Il tuo nome";
   const code = `NDP · ${(displayName.replace(/[^a-zA-Z]/g, "").slice(0, 4).toUpperCase() || "MEMB")}-${String(1000 + visits * 137).slice(0, 4)}`;
 

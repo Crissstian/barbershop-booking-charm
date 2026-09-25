@@ -8,7 +8,7 @@ const EXPERIENCES = [
 ];
 
 export function GiftCardStudio() {
-  const [exp, setExp] = useState(EXPERIENCES[2].id);
+  const [exp, setExp] = useState("total");
   const [to, setTo] = useState("");
   const [from, setFrom] = useState("");
   const [note, setNote] = useState("");

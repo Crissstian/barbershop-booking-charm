@@ -38,4 +38,4 @@
 - [x] Applicare una palette continua avorio e tortora
 - [x] Conservare fotografia editoriale e ritmo cinematografico
 - [x] Rendere l’ingresso più epico con veli, luce e apertura teatrale
-- [ ] Verificare resa mobile e desktop
+- [x] Verificare resa mobile e desktop

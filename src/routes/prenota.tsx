@@ -55,10 +55,8 @@ function Booking() {
     try {
       const result = await checkCustomerApproval({ data: { email: identity.email } });
       if (result.status === "approved") {
-        const firstName = result.firstName ?? identity.firstName;
-        const lastName = result.lastName ?? identity.lastName;
-        setIdentity({ firstName, lastName, email: identity.email.trim().toLowerCase() });
-        setForm((current) => ({ ...current, name: `${firstName} ${lastName}`.trim(), email: identity.email.trim().toLowerCase() }));
+        setIdentity((current) => ({ ...current, email: current.email.trim().toLowerCase() }));
+        setForm((current) => ({ ...current, email: identity.email.trim().toLowerCase() }));
         setAccess("approved");
       } else if (result.status === "pending") setAccess("pending");
       else setAccess("request");
@@ -202,10 +200,10 @@ function Booking() {
             <p className="capitalize">{fmtDay(slot.start)} · ore {fmtTime(slot.start)}</p>
             <p className="text-muted-foreground">{service.duration_min} min · {euro(Number(service.price))} (si paga in salone)</p>
           </div>
-           {([["name", "Nome e cognome", "text", true], ["phone", "Telefono", "tel", true], ["email", "Email autorizzata", "email", true]] as const).map(([k, l, t, req]) => (
+           {([["phone", "Telefono", "tel", true], ["email", "Email autorizzata", "email", true]] as const).map(([k, l, t, req]) => (
             <label key={k} className="block text-sm">
               {l}
-               <input required={req} readOnly={k === "name" || k === "email"} maxLength={k === "phone" ? 25 : 120} type={t} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="mt-1 w-full border bg-card px-3 py-3 text-base outline-none focus:border-foreground read-only:opacity-70" />
+               <input required={req} readOnly={k === "email"} maxLength={k === "phone" ? 25 : 120} type={t} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="mt-1 w-full border bg-card px-3 py-3 text-base outline-none focus:border-foreground read-only:opacity-70" />
             </label>
           ))}
           <label className="block text-sm">

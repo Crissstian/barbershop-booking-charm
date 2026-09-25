@@ -16,7 +16,7 @@ export const checkCustomerApproval = createServerFn({ method: "POST" })
       .select("first_name,last_name,status")
       .eq("email", data.email)
       .maybeSingle();
-    return row ? { status: row.status, firstName: row.first_name, lastName: row.last_name } : { status: "not_found" as const };
+    return row ? { status: row.status } : { status: "not_found" as const };
   });
 
 export const requestCustomerApproval = createServerFn({ method: "POST" })
@@ -84,7 +84,7 @@ export const createBooking = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { isFree } = await import("./booking.server");
     const { data: approval } = await supabaseAdmin.from("customer_approvals")
-      .select("status")
+      .select("first_name,last_name,status")
       .eq("email", data.email)
       .maybeSingle();
     if (approval?.status !== "approved") throw new Error("Questa email non è ancora autorizzata a prenotare.");
@@ -96,7 +96,7 @@ export const createBooking = createServerFn({ method: "POST" })
     const { data: row, error } = await supabaseAdmin.from("appointments").insert({
       barber_id: data.barberId, service_id: data.serviceId,
       starts_at: new Date(startMs).toISOString(), ends_at: new Date(startMs + svc.duration_min * 60000).toISOString(),
-      customer_name: data.name, customer_phone: data.phone, customer_email: data.email, notes: data.notes || null, code,
+      customer_name: `${approval.first_name} ${approval.last_name}`, customer_phone: data.phone, customer_email: data.email, notes: data.notes || null, code,
     }).select("token,code").single();
     if (error) throw new Error("Impossibile completare la prenotazione");
     return row;

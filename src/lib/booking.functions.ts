@@ -74,7 +74,6 @@ export const createBooking = createServerFn({ method: "POST" })
       barberId: z.string().uuid(),
       serviceId: z.string().uuid(),
       start: z.string().datetime(),
-      name: z.string().trim().min(2).max(80),
       phone: z.string().trim().min(6).max(25),
       email: emailSchema,
       notes: z.string().trim().max(300).optional(),

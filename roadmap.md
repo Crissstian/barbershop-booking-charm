@@ -31,3 +31,11 @@
 - [x] Aggiungere approvazione/rifiuto richieste nell’area staff
 - [x] Consentire la prenotazione solo ai clienti verificati e approvati
 - [ ] Verificare approvazione staff e prenotazione completa (bloccato: non esiste ancora un account staff)
+
+## Direzione chiara — light cinematic epic
+
+- [x] Eliminare completamente la base dark
+- [x] Applicare una palette continua avorio e tortora
+- [x] Conservare fotografia editoriale e ritmo cinematografico
+- [x] Rendere l’ingresso più epico con veli, luce e apertura teatrale
+- [ ] Verificare resa mobile e desktop

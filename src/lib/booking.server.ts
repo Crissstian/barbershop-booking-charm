@@ -10,7 +10,7 @@ function tzOffset(ts: number) {
       hour: "2-digit", minute: "2-digit", second: "2-digit",
     }).formatToParts(new Date(ts)).map((x) => [x.type, x.value]),
   );
-  const asUtc = Date.UTC(+p.year!, +p.month! - 1, +p.day!, +p.hour!, +p.minute!, +p.second!);
+  const asUtc = Date.UTC(+p['year']!, +p['month']! - 1, +p['day']!, +p['hour']!, +p['minute']!, +p['second']!);
   return asUtc - Math.floor(ts / 1000) * 1000;
 }
 

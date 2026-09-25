@@ -69,14 +69,14 @@ function Booking() {
         <span className="text-xs uppercase tracking-widest text-muted-foreground">{step + 1} / 4 · {STEPS[step]}</span>
       </header>
       <div className="mt-4 flex gap-1">
-        {STEPS.map((_, i) => <div key={i} className={`h-0.5 flex-1 ${i <= step ? "bg-foreground" : "bg-border"}`} />)}
+        {STEPS.map((_, i) => <div key={i} className={`h-0.5 flex-1 origin-left transition-all duration-700 ${i <= step ? "scale-x-100 bg-accent" : "scale-x-75 bg-border"}`} />)}
       </div>
       {step > 0 && (
         <button onClick={() => setStep(step - 1)} className="mt-6 text-sm text-muted-foreground">← Indietro</button>
       )}
 
       {step === 0 && (
-        <section className="mt-8 space-y-3">
+        <section className="booking-panel mt-8 space-y-3">
           <h1 className="font-serif text-4xl">Cosa facciamo oggi?</h1>
           {data.services.map((s) => (
             <button key={s.id} className={`${choice} ${serviceId === s.id ? active : ""}`} onClick={() => { setService(s.id); setSlot(null); setStep(barberId ? 2 : 1); }}>
@@ -88,7 +88,7 @@ function Booking() {
       )}
 
       {step === 1 && (
-        <section className="mt-8 space-y-3">
+        <section className="booking-panel mt-8 space-y-3">
           <h1 className="font-serif text-4xl">Con chi?</h1>
           <button className={`${choice} ${barberId === "any" ? active : ""}`} onClick={() => { setBarber("any"); setSlot(null); setStep(2); }}>
             <span className="font-serif text-2xl">Primo disponibile</span>
@@ -104,7 +104,7 @@ function Booking() {
       )}
 
       {step === 2 && (
-        <section className="mt-8">
+        <section className="booking-panel mt-8">
           <h1 className="font-serif text-4xl">Quando?</h1>
           <p className="text-sm text-muted-foreground">{service?.name} · {barberId === "any" ? "Primo disponibile" : barberName(barberId)}</p>
           <div className="-mx-6 mt-6 flex gap-2 overflow-x-auto px-6 pb-2">
@@ -131,7 +131,7 @@ function Booking() {
       )}
 
       {step === 3 && slot && service && (
-        <form onSubmit={submit} className="mt-8 space-y-4">
+        <form onSubmit={submit} className="booking-panel mt-8 space-y-4">
           <h1 className="font-serif text-4xl">Quasi fatto</h1>
           <div className="border-l-2 border-accent bg-secondary p-4 text-sm">
             <p className="font-serif text-xl">{service.name} con {barberName(slot.barberId)}</p>

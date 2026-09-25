@@ -3,9 +3,6 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getCatalog } from "@/lib/booking.functions";
 import { fmtShort, fmtTime, euro } from "@/lib/format";
 import logo from "@/assets/ndp-logo.png.asset.json";
-import nicolaPortrait from "@/assets/barber-nicola.jpg";
-import danielePortrait from "@/assets/barber-daniele.jpg";
-import antonioPortrait from "@/assets/barber-antonio.jpg";
 import { ScrollReveal } from "@/components/scroll-reveal";
 
 export const catalogQuery = queryOptions({ queryKey: ["catalog"], queryFn: () => getCatalog(), staleTime: 30_000 });
@@ -29,7 +26,11 @@ function Home() {
   const { data } = useSuspenseQuery(catalogQuery);
   const next = [...data.next].filter((n) => n.start).sort((a, b) => a.start!.localeCompare(b.start!))[0];
   const nextBarber = data.barbers.find((b) => b.id === next?.barberId);
-  const portraits = [nicolaPortrait, danielePortrait, antonioPortrait];
+  const products = [
+    { number: "01", name: "Cera Opaca", type: "Styling", note: "Tenuta decisa, finish naturale", shape: "product-jar" },
+    { number: "02", name: "Olio Nutriente", type: "Beard ritual", note: "Legno di sandalo e cedro", shape: "product-bottle" },
+    { number: "03", name: "Shampoo Daily", type: "Hair care", note: "Detersione delicata quotidiana", shape: "product-tube" },
+  ];
 
   return (
     <main className="overflow-hidden bg-background pb-28 text-foreground">
@@ -67,34 +68,65 @@ function Home() {
         <div className="hero-scroll absolute bottom-8 flex flex-col items-center gap-3 text-[9px] uppercase tracking-[0.25em] text-muted-foreground"><span>Scorri</span><span className="h-10 w-px bg-accent" /></div>
       </section>
 
-      <section className="border-y border-border px-6 py-24">
+      <section className="stone-band border-y border-border px-6 py-24 text-stone-foreground">
         <ScrollReveal className="mx-auto max-w-6xl">
           <p className="text-[10px] uppercase tracking-[0.3em] text-accent">The Chair · La collezione</p>
           <h2 className="mt-4 max-w-2xl font-serif text-5xl leading-none md:text-7xl">Scegli la tua poltrona.</h2>
           <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">Tre professionisti, un rituale costruito intorno al tuo stile.</p>
         </ScrollReveal>
-        <div className="mx-auto mt-16 grid max-w-6xl gap-10 md:grid-cols-3 md:gap-5">
+        <div className="mx-auto mt-16 max-w-6xl">
           {data.barbers.map((b, i) => {
             const n = data.next.find((x) => x.barberId === b.id);
             return (
-              <ScrollReveal key={b.id} className={i === 1 ? "md:translate-y-16" : i === 2 ? "md:translate-y-32" : ""}>
-                <Link to="/prenota" search={{ barber: b.id }} className="chair-card group relative block aspect-[2/3] overflow-hidden border border-border bg-card">
-                  <img src={portraits[i]} alt={`${b.name}, ${b.role_title}`} loading="lazy" width={1024} height={1536} className="h-full w-full object-cover transition duration-1000 group-hover:scale-105 group-hover:grayscale-0" />
-                  <div className="chair-shade absolute inset-0" />
-                  <span className="absolute left-5 top-5 font-serif text-5xl text-foreground/50">0{i + 1}</span>
-                  <div className="absolute inset-x-0 bottom-0 p-6">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-accent">{b.role_title}</p>
-                    <h3 className="mt-2 font-serif text-4xl">{b.name}</h3>
-                    <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{b.bio}</p>
-                    <p className="mt-5 border-t border-border/60 pt-4 text-xs">
-                      {n?.start ? <><span className="capitalize">{fmtShort(n.start)}</span> · {fmtTime(n.start)}</> : "Nessuno slot a breve"}
-                    </p>
-                    <span className="mt-4 inline-block text-[10px] uppercase tracking-[0.2em] text-accent transition-transform group-hover:translate-x-2">Prenota →</span>
+              <ScrollReveal key={b.id}>
+                <Link to="/prenota" search={{ barber: b.id }} className="typographic-chair group relative grid min-h-72 overflow-hidden border-t border-stone-line py-9 last:border-b md:grid-cols-[9rem_1fr_auto] md:items-center md:gap-10">
+                  <span className="chair-number font-serif text-7xl text-stone-line transition-colors duration-500 group-hover:text-walnut">0{i + 1}</span>
+                  <div className="relative z-10 mt-6 md:mt-0">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-walnut">{b.role_title}</p>
+                    <h3 className="mt-2 font-serif text-6xl leading-none md:text-7xl">{b.name}</h3>
+                    <p className="mt-5 max-w-lg text-sm text-stone-muted">{b.bio}</p>
                   </div>
+                  <div className="relative z-10 mt-8 md:mt-0 md:text-right">
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-stone-muted">Prossimo orario</p>
+                    <p className="mt-2 font-serif text-xl">{n?.start ? <><span className="capitalize">{fmtShort(n.start)}</span> · {fmtTime(n.start)}</> : "Da definire"}</p>
+                    <span className="mt-5 inline-block text-[10px] uppercase tracking-[0.22em] text-walnut transition-transform group-hover:translate-x-2">Prenota →</span>
+                  </div>
+                  <span className="chair-sweep absolute inset-y-0 left-0 w-full origin-left scale-x-0 bg-stone-hover transition-transform duration-700 group-hover:scale-x-100" />
                 </Link>
               </ScrollReveal>
             );
           })}
+        </div>
+      </section>
+
+      <section className="walnut-band overflow-hidden px-6 py-28 text-walnut-foreground">
+        <ScrollReveal className="mx-auto max-w-6xl">
+          <div className="flex items-end justify-between gap-8">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-champagne">NDP Essentials</p>
+              <h2 className="mt-4 max-w-xl font-serif text-5xl leading-none md:text-7xl">Il rituale continua.</h2>
+            </div>
+            <p className="hidden max-w-xs text-sm text-walnut-muted md:block">Una selezione essenziale per mantenere forma, texture e carattere ogni giorno.</p>
+          </div>
+        </ScrollReveal>
+        <div className="product-track mx-auto mt-16 flex max-w-6xl snap-x snap-mandatory gap-5 overflow-x-auto pb-6">
+          {products.map((product, i) => (
+            <ScrollReveal key={product.number} className="min-w-[82%] snap-center sm:min-w-[48%] lg:min-w-[31%]">
+              <article className="product-card group border border-walnut-line bg-walnut-card p-5">
+                <div className="product-stage relative flex aspect-[4/5] items-center justify-center overflow-hidden border border-walnut-line">
+                  <span className="absolute left-4 top-4 font-serif text-4xl text-walnut-line">{product.number}</span>
+                  <div className={`${product.shape} product-shape relative transition-transform duration-700 group-hover:-translate-y-3`}>
+                    <span>NDP</span>
+                  </div>
+                  <div className="product-shadow absolute bottom-[14%] h-5 w-28 rounded-full" />
+                </div>
+                <p className="mt-6 text-[9px] uppercase tracking-[0.22em] text-champagne">{product.type}</p>
+                <h3 className="mt-2 font-serif text-3xl">{product.name}</h3>
+                <p className="mt-2 text-sm text-walnut-muted">{product.note}</p>
+                <p className="mt-6 border-t border-walnut-line pt-4 text-[10px] uppercase tracking-[0.2em]">Disponibile in salone</p>
+              </article>
+            </ScrollReveal>
+          ))}
         </div>
       </section>
 

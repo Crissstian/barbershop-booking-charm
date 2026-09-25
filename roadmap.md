@@ -15,3 +15,10 @@
 - [x] Homepage nero couture con schede interattive e passaggi animati
 - [x] Transizioni animate nel percorso di prenotazione
 - [x] Verifica mobile e desktop
+
+## Warm luxury editorial
+- [ ] Nero come base con fasce grigio pietra e marrone noce
+- [ ] Rimuovere tutte le fotografie dei barbieri
+- [ ] Schede professionisti tipografiche animate
+- [ ] Sezione prodotti animata
+- [ ] Verifica mobile e desktop

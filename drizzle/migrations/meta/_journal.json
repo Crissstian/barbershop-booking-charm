@@ -15,6 +15,13 @@
       "when": 1790328608929,
       "tag": "0001_add_customer_booking_approvals",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790332296531,
+      "tag": "0002_add_whatsapp_and_staff_notes",
+      "breakpoints": true
     }
   ]
 }

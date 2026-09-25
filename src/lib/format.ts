@@ -7,7 +7,7 @@ export const fmtShort = (iso: string) =>
   new Intl.DateTimeFormat("it-IT", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
 export const romeDate = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
 export const addDays = (date: string, n: number) => {
-  const [y, m, d] = date.split("-").map(Number);
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 };
 export const euro = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);

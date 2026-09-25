@@ -10,13 +10,13 @@ function tzOffset(ts: number) {
       hour: "2-digit", minute: "2-digit", second: "2-digit",
     }).formatToParts(new Date(ts)).map((x) => [x.type, x.value]),
   );
-  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  const asUtc = Date.UTC(+p.year!, +p.month! - 1, +p.day!, +p.hour!, +p.minute!, +p.second!);
   return asUtc - Math.floor(ts / 1000) * 1000;
 }
 
 export function romeToUtc(date: string, time: string) {
-  const [y, m, d] = date.split("-").map(Number);
-  const [hh, mm] = time.split(":").map(Number);
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const [hh, mm] = time.split(":").map(Number) as [number, number];
   const guess = Date.UTC(y, m - 1, d, hh, mm);
   return guess - tzOffset(guess - tzOffset(guess));
 }
@@ -26,7 +26,7 @@ export function todayRome() {
 }
 
 export function addDays(date: string, n: number) {
-  const [y, m, d] = date.split("-").map(Number);
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
@@ -50,7 +50,7 @@ async function loadData(fromDate: string, toDate: string) {
 type Data = Awaited<ReturnType<typeof loadData>>;
 
 function barberSlots(data: Data, barberId: string, date: string, dur: number) {
-  const [y, m, d] = date.split("-").map(Number);
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   const minStart = Date.now() + 30 * 60000;
   const out: number[] = [];

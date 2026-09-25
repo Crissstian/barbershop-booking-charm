@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PrenotaRouteImport } from './routes/prenota'
+import { Route as PrenotazioneTokenRouteImport } from './routes/prenotazione.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrenotaRoute = PrenotaRouteImport.update({
+  id: '/prenota',
+  path: '/prenota',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrenotazioneTokenRoute = PrenotazioneTokenRouteImport.update({
+  id: '/prenotazione/$token',
+  path: '/prenotazione/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/prenota': typeof PrenotaRoute
+  '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/prenota': typeof PrenotaRoute
+  '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/prenota': typeof PrenotaRoute
+  '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/prenota' | '/prenotazione/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/prenota' | '/prenotazione/$token'
+  id: '__root__' | '/' | '/prenota' | '/prenotazione/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PrenotaRoute: typeof PrenotaRoute
+  PrenotazioneTokenRoute: typeof PrenotazioneTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prenota': {
+      id: '/prenota'
+      path: '/prenota'
+      fullPath: '/prenota'
+      preLoaderRoute: typeof PrenotaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prenotazione/$token': {
+      id: '/prenotazione/$token'
+      path: '/prenotazione/$token'
+      fullPath: '/prenotazione/$token'
+      preLoaderRoute: typeof PrenotazioneTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PrenotaRoute: PrenotaRoute,
+  PrenotazioneTokenRoute: PrenotazioneTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

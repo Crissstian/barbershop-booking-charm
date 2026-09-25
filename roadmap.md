@@ -22,3 +22,12 @@
 - [x] Schede professionisti tipografiche animate
 - [x] Sezione prodotti animata
 - [x] Verifica mobile e desktop
+
+## Nuova direzione — dark cinematic tortora
+- [ ] Ricostruire la home dark cinematic con il tortora satinato della divisa
+- [ ] Ripristinare le schede fotografiche dei tre barbieri
+- [ ] Sostituire la palette mista della sezione prodotti con un sistema monocromatico
+- [ ] Aggiungere richiesta di autorizzazione cliente con nome, cognome ed email
+- [ ] Aggiungere approvazione/rifiuto richieste nell’area staff
+- [ ] Consentire la prenotazione solo ai clienti verificati e approvati
+- [ ] Verificare richiesta, approvazione e prenotazione su mobile e desktop

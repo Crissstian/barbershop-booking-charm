@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as PrenotaRouteImport } from './routes/prenota'
 import { Route as PrenotazioneTokenRouteImport } from './routes/prenotazione.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrenotaRoute = PrenotaRouteImport.update({
@@ -31,30 +37,34 @@ const PrenotazioneTokenRoute = PrenotazioneTokenRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/prenota': typeof PrenotaRoute
   '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/prenota': typeof PrenotaRoute
   '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/prenota': typeof PrenotaRoute
   '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/prenota' | '/prenotazione/$token'
+  fullPaths: '/' | '/admin' | '/prenota' | '/prenotazione/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/prenota' | '/prenotazione/$token'
-  id: '__root__' | '/' | '/prenota' | '/prenotazione/$token'
+  to: '/' | '/admin' | '/prenota' | '/prenotazione/$token'
+  id: '__root__' | '/' | '/admin' | '/prenota' | '/prenotazione/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   PrenotaRoute: typeof PrenotaRoute
   PrenotazioneTokenRoute: typeof PrenotazioneTokenRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prenota': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   PrenotaRoute: PrenotaRoute,
   PrenotazioneTokenRoute: PrenotazioneTokenRoute,
 }

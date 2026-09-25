@@ -7,6 +7,7 @@ import { ScrollReveal } from "@/components/scroll-reveal";
 import nicolaPortrait from "@/assets/barber-nicola.jpg";
 import danielePortrait from "@/assets/barber-daniele.jpg";
 import antonioPortrait from "@/assets/barber-antonio.jpg";
+import salonHero from "@/assets/salon-hero-light.jpg";
 
 export const catalogQuery = queryOptions({ queryKey: ["catalog"], queryFn: () => getCatalog(), staleTime: 30_000 });
 
@@ -41,6 +42,8 @@ function Home() {
       <div className="cinema-intro pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background" aria-hidden="true">
         <div className="intro-curtain intro-curtain-left" />
         <div className="intro-curtain intro-curtain-right" />
+        <div className="intro-veil" />
+        <div className="intro-light" />
         <div className="intro-mark text-center">
           <p className="font-serif text-7xl sm:text-8xl">NDP</p>
           <span className="intro-line mx-auto mt-4 block h-px w-24 bg-accent" />
@@ -53,15 +56,17 @@ function Home() {
         <Link to="/admin" className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent">Area staff</Link>
       </header>
 
-      <section className="hero-scene relative flex min-h-[92svh] flex-col items-center justify-center px-6 pt-20 text-center">
+      <section className="hero-scene relative flex min-h-[92svh] flex-col items-center justify-end overflow-hidden px-6 pb-24 pt-20 text-center">
+        <img src={salonHero} alt="Interni luminosi di NDP Esclusive Hair Saloon" width={1200} height={1600} className="hero-image absolute inset-0 h-full w-full object-cover object-center" />
         <div className="hero-halo" aria-hidden="true" />
+        <p className="hero-copy relative z-10 mb-4 text-[9px] uppercase tracking-[0.4em] text-foreground/70">Esclusive Hair Saloon</p>
         <img src={logo.url} alt="NDP Nicola De Pompeis — Esclusive Hair Saloon" className="hero-logo relative z-10 w-full max-w-md" />
-        <p className="hero-copy relative z-10 mx-auto mt-3 max-w-sm font-serif text-2xl italic text-muted-foreground">Tre poltrone. Un solo standard.</p>
+        <p className="hero-copy relative z-10 mx-auto mt-3 max-w-sm font-serif text-2xl italic text-foreground/75">Tre poltrone. Un solo standard.</p>
         {next && (
           <Link
             to="/prenota"
             search={{ barber: next.barberId }}
-            className="hero-availability group relative z-10 mt-10 inline-flex flex-col items-center overflow-hidden border border-accent/50 px-8 py-4 transition-colors hover:border-accent"
+            className="hero-availability group relative z-10 mt-8 inline-flex flex-col items-center overflow-hidden border border-foreground/40 bg-background/65 px-8 py-4 backdrop-blur-md transition-colors hover:border-foreground"
           >
             <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Prima disponibilità</span>
             <span className="mt-1 font-serif text-2xl capitalize">{fmtShort(next.start!)} · {fmtTime(next.start!)}</span>
@@ -72,7 +77,7 @@ function Home() {
         <div className="hero-scroll absolute bottom-8 flex flex-col items-center gap-3 text-[9px] uppercase tracking-[0.25em] text-muted-foreground"><span>Scorri</span><span className="h-10 w-px bg-accent" /></div>
       </section>
 
-      <section className="tailor-band border-y border-border px-6 py-24">
+      <section className="tailor-band px-6 py-24">
         <ScrollReveal className="mx-auto max-w-6xl">
           <p className="text-[10px] uppercase tracking-[0.3em] text-accent">The Chair · La collezione</p>
           <h2 className="mt-4 max-w-2xl font-serif text-5xl leading-none md:text-7xl">Scegli la tua poltrona.</h2>
@@ -106,7 +111,7 @@ function Home() {
         </div>
       </section>
 
-      <section className="product-band overflow-hidden border-y border-border px-6 py-28">
+      <section className="product-band overflow-hidden px-6 py-28">
         <ScrollReveal className="mx-auto max-w-6xl">
           <div className="flex items-end justify-between gap-8">
             <div>

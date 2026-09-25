@@ -139,6 +139,36 @@ export type Database = {
           },
         ]
       }
+      customer_approvals: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          reviewed_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           active: boolean

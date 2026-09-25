@@ -3,18 +3,19 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { createBooking, getSlots } from "@/lib/booking.functions";
+import { checkCustomerApproval, createBooking, getSlots, requestCustomerApproval } from "@/lib/booking.functions";
 import { catalogQuery } from "./index";
 import { addDays, euro, fmtDay, fmtTime, romeDate } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/prenota")({
   validateSearch: z.object({ barber: z.string().optional(), service: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Prenota — NDP Esclusive Hair Saloon" },
-      { name: "description", content: "Scegli servizio, professionista e orario. Nessuna registrazione richiesta." },
+      { name: "description", content: "Accesso riservato ai clienti autorizzati. Scegli servizio, professionista e orario." },
       { property: "og:title", content: "Prenota il tuo appuntamento da NDP" },
-      { property: "og:description", content: "Prenotazione online in pochi passaggi, senza account." },
+      { property: "og:description", content: "Prenotazione online riservata ai clienti autorizzati." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -36,6 +37,8 @@ function Booking() {
   const [slot, setSlot] = useState<{ start: string; barberId: string } | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [sending, setSending] = useState(false);
+  const [identity, setIdentity] = useState({ firstName: "", lastName: "", email: "" });
+  const [access, setAccess] = useState<"checking" | "approved" | "pending" | "request">("checking");
 
   const service = data.services.find((s) => s.id === serviceId);
   const slots = useQuery({
@@ -45,6 +48,36 @@ function Booking() {
   });
   const days = Array.from({ length: 14 }, (_, i) => addDays(romeDate(), i));
   const barberName = (id: string) => data.barbers.find((b) => b.id === id)?.name;
+
+  async function verify(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const result = await checkCustomerApproval({ data: { email: identity.email } });
+      if (result.status === "approved") {
+        setIdentity((current) => ({ ...current, email: current.email.trim().toLowerCase() }));
+        setForm((current) => ({ ...current, email: identity.email.trim().toLowerCase() }));
+        setAccess("approved");
+      } else if (result.status === "pending") setAccess("pending");
+      else setAccess("request");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Impossibile verificare l’accesso");
+    } finally { setSending(false); }
+  }
+
+  async function requestAccess(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    try {
+      const result = await requestCustomerApproval({ data: identity });
+      if (result.status === "approved") {
+        setForm((current) => ({ ...current, name: `${identity.firstName} ${identity.lastName}`.trim(), email: identity.email.trim().toLowerCase() }));
+        setAccess("approved");
+      } else setAccess("pending");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Impossibile inviare la richiesta");
+    } finally { setSending(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +94,35 @@ function Booking() {
 
   const choice = "w-full border p-4 text-left transition-colors hover:border-foreground";
   const active = "border-foreground bg-secondary";
+
+  if (access !== "approved") return (
+    <main className="access-scene flex min-h-screen items-center justify-center px-6 py-16">
+      <section className="booking-panel w-full max-w-md border border-border bg-card/80 p-6 backdrop-blur-xl sm:p-9">
+        <Link to="/" className="font-serif text-xl tracking-[0.3em]">NDP</Link>
+        <p className="mt-12 text-[10px] uppercase tracking-[0.3em] text-accent">Accesso riservato</p>
+        <h1 className="mt-3 font-serif text-5xl leading-none">Prima di sederti.</h1>
+        {access === "pending" ? (
+          <div className="mt-8 border-l-2 border-accent bg-secondary p-5">
+            <p className="font-serif text-2xl">Richiesta ricevuta.</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Lo staff verificherà i tuoi dati. Torna qui con la stessa email dopo l’approvazione.</p>
+            <Button variant="outline" className="mt-6 w-full" onClick={() => setAccess("checking")}>Verifica di nuovo</Button>
+          </div>
+        ) : (
+          <form onSubmit={access === "request" ? requestAccess : verify} className="mt-8 space-y-4">
+            {access === "request" && <>
+              <label className="block text-sm">Nome<input required minLength={2} maxLength={50} value={identity.firstName} onChange={(e) => setIdentity({ ...identity, firstName: e.target.value })} className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
+              <label className="block text-sm">Cognome<input required minLength={2} maxLength={50} value={identity.lastName} onChange={(e) => setIdentity({ ...identity, lastName: e.target.value })} className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
+            </>}
+            <label className="block text-sm">Email<input required type="email" maxLength={120} value={identity.email} onChange={(e) => setIdentity({ ...identity, email: e.target.value })} className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
+            <Button disabled={sending} className="h-auto w-full rounded-none py-4 uppercase tracking-[0.22em]">
+              {sending ? "Attendi…" : access === "request" ? "Invia richiesta" : "Continua"}
+            </Button>
+            {access === "request" && <button type="button" onClick={() => setAccess("checking")} className="w-full text-sm text-muted-foreground underline">Sono già autorizzato</button>}
+          </form>
+        )}
+      </section>
+    </main>
+  );
 
   return (
     <main className="mx-auto min-h-screen max-w-xl px-6 py-6">
@@ -138,10 +200,10 @@ function Booking() {
             <p className="capitalize">{fmtDay(slot.start)} · ore {fmtTime(slot.start)}</p>
             <p className="text-muted-foreground">{service.duration_min} min · {euro(Number(service.price))} (si paga in salone)</p>
           </div>
-          {([["name", "Nome e cognome", "text", true], ["phone", "Telefono", "tel", true], ["email", "Email (facoltativa)", "email", false]] as const).map(([k, l, t, req]) => (
+           {([["phone", "Telefono", "tel", true], ["email", "Email autorizzata", "email", true]] as const).map(([k, l, t, req]) => (
             <label key={k} className="block text-sm">
               {l}
-              <input required={req} type={t} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="mt-1 w-full border bg-card px-3 py-3 text-base outline-none focus:border-foreground" />
+               <input required={req} readOnly={k === "email"} maxLength={k === "phone" ? 25 : 120} type={t} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className="mt-1 w-full border bg-card px-3 py-3 text-base outline-none focus:border-foreground read-only:opacity-70" />
             </label>
           ))}
           <label className="block text-sm">

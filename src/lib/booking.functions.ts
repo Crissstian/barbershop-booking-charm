@@ -1,6 +1,52 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const emailSchema = z.string().trim().toLowerCase().email().max(120);
+const personSchema = z.object({
+  firstName: z.string().trim().min(2).max(50),
+  lastName: z.string().trim().min(2).max(50),
+  email: emailSchema,
+});
+
+export const checkCustomerApproval = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ email: emailSchema }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin.from("customer_approvals")
+      .select("first_name,last_name,status")
+      .eq("email", data.email)
+      .maybeSingle();
+    return row ? { status: row.status } : { status: "not_found" as const };
+  });
+
+export const requestCustomerApproval = createServerFn({ method: "POST" })
+  .inputValidator((d) => personSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing } = await supabaseAdmin.from("customer_approvals")
+      .select("id,status")
+      .eq("email", data.email)
+      .maybeSingle();
+    if (existing?.status === "approved") return { status: "approved" as const };
+    if (existing) {
+      const { error } = await supabaseAdmin.from("customer_approvals").update({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        status: "pending",
+        reviewed_at: null,
+      }).eq("id", existing.id);
+      if (error) throw new Error("Impossibile inviare la richiesta");
+    } else {
+      const { error } = await supabaseAdmin.from("customer_approvals").insert({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+      });
+      if (error) throw new Error("Impossibile inviare la richiesta");
+    }
+    return { status: "pending" as const };
+  });
+
 export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { getNextSlots } = await import("./booking.server");
@@ -28,15 +74,19 @@ export const createBooking = createServerFn({ method: "POST" })
       barberId: z.string().uuid(),
       serviceId: z.string().uuid(),
       start: z.string().datetime(),
-      name: z.string().trim().min(2).max(80),
       phone: z.string().trim().min(6).max(25),
-      email: z.string().trim().email().max(120).optional().or(z.literal("")),
+      email: emailSchema,
       notes: z.string().trim().max(300).optional(),
     }).parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { isFree } = await import("./booking.server");
+    const { data: approval } = await supabaseAdmin.from("customer_approvals")
+      .select("first_name,last_name,status")
+      .eq("email", data.email)
+      .maybeSingle();
+    if (approval?.status !== "approved") throw new Error("Questa email non è ancora autorizzata a prenotare.");
     const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", data.serviceId).single();
     if (!svc) throw new Error("Servizio non trovato");
     const startMs = Date.parse(data.start);
@@ -45,7 +95,7 @@ export const createBooking = createServerFn({ method: "POST" })
     const { data: row, error } = await supabaseAdmin.from("appointments").insert({
       barber_id: data.barberId, service_id: data.serviceId,
       starts_at: new Date(startMs).toISOString(), ends_at: new Date(startMs + svc.duration_min * 60000).toISOString(),
-      customer_name: data.name, customer_phone: data.phone, customer_email: data.email || null, notes: data.notes || null, code,
+      customer_name: `${approval.first_name} ${approval.last_name}`, customer_phone: data.phone, customer_email: data.email, notes: data.notes || null, code,
     }).select("token,code").single();
     if (error) throw new Error("Impossibile completare la prenotazione");
     return row;

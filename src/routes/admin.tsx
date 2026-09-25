@@ -62,6 +62,7 @@ function Login() {
 }
 
 type Appt = { id: string; starts_at: string; ends_at: string; status: string; customer_name: string; customer_phone: string; notes: string | null; code: string; barber_id: string; services: { name: string } | null };
+type Approval = { id: string; first_name: string; last_name: string; email: string; status: string; created_at: string };
 
 function Dashboard({ userId }: { userId: string }) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -69,19 +70,22 @@ function Dashboard({ userId }: { userId: string }) {
   const [barbers, setBarbers] = useState<{ id: string; name: string }[]>([]);
   const [appts, setAppts] = useState<Appt[]>([]);
   const [services, setServices] = useState<{ id: string; name: string; price: number; duration_min: number }[]>([]);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
   const [block, setBlock] = useState({ barber: "", from: "13:00", to: "14:00", reason: "" });
 
   async function load() {
     const from = new Date(`${date}T00:00:00`).toISOString();
     const to = new Date(`${addDays(date, 1)}T00:00:00`).toISOString();
-    const [a, b, s] = await Promise.all([
+    const [a, b, s, c] = await Promise.all([
       supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,notes,code,barber_id,services(name)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
       supabase.from("barbers").select("id,name").order("sort"),
       supabase.from("services").select("id,name,price,duration_min").order("sort"),
+      supabase.from("customer_approvals").select("id,first_name,last_name,email,status,created_at").order("created_at", { ascending: false }),
     ]);
     setAppts((a.data as Appt[]) ?? []);
     setBarbers(b.data ?? []);
     setServices(s.data ?? []);
+    setApprovals(c.data ?? []);
   }
 
   useEffect(() => {
@@ -114,6 +118,11 @@ function Dashboard({ userId }: { userId: string }) {
     await supabase.from("services").update({ price }).eq("id", id);
     toast.success("Prezzo aggiornato");
   }
+  async function reviewCustomer(id: string, status: "approved" | "rejected") {
+    const { error } = await supabase.from("customer_approvals").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
+    if (error) toast.error("Impossibile aggiornare la richiesta");
+    else { toast.success(status === "approved" ? "Cliente autorizzato" : "Richiesta rifiutata"); load(); }
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-6">
@@ -127,6 +136,23 @@ function Dashboard({ userId }: { userId: string }) {
         <button onClick={() => setDate(addDays(date, 1))} className="border px-3 py-2">→</button>
         <button onClick={() => setDate(romeDate())} className="text-sm underline">Oggi</button>
       </div>
+
+      <section className="mt-8 border p-4">
+        <div className="flex items-end justify-between gap-4">
+          <div><p className="text-[10px] uppercase tracking-[0.25em] text-accent">Clienti</p><h2 className="mt-1 font-serif text-3xl">Richieste di autorizzazione</h2></div>
+          <span className="text-sm text-muted-foreground">{approvals.filter((r) => r.status === "pending").length} in attesa</span>
+        </div>
+        <ul className="mt-5 divide-y divide-border">
+          {approvals.map((request) => <li key={request.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p className="font-medium">{request.first_name} {request.last_name}</p><p className="text-sm text-muted-foreground">{request.email}</p></div>
+            {request.status === "pending" ? <div className="flex gap-2">
+              <button onClick={() => reviewCustomer(request.id, "approved")} className="border border-accent px-3 py-2 text-xs uppercase tracking-wider">Autorizza</button>
+              <button onClick={() => reviewCustomer(request.id, "rejected")} className="border px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">Rifiuta</button>
+            </div> : <span className={`text-xs uppercase tracking-wider ${request.status === "approved" ? "text-accent" : "text-muted-foreground"}`}>{request.status === "approved" ? "Autorizzato" : "Rifiutato"}</span>}
+          </li>)}
+          {approvals.length === 0 && <li className="py-5 text-sm text-muted-foreground">Nessuna richiesta.</li>}
+        </ul>
+      </section>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {barbers.map((b) => (

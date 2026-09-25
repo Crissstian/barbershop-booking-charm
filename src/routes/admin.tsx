@@ -166,15 +166,39 @@ function Dashboard({ userId }: { userId: string }) {
         </div>
         <ul className="mt-5 divide-y divide-border">
           {approvals.map((request) => <li key={request.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="font-medium">{request.first_name} {request.last_name}</p><p className="text-sm text-muted-foreground">{request.email}</p></div>
-            {request.status === "pending" ? <div className="flex gap-2">
-              <button onClick={() => reviewCustomer(request.id, "approved")} className="border border-accent px-3 py-2 text-xs uppercase tracking-wider">Autorizza</button>
-              <button onClick={() => reviewCustomer(request.id, "rejected")} className="border px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">Rifiuta</button>
-            </div> : <span className={`text-xs uppercase tracking-wider ${request.status === "approved" ? "text-accent" : "text-muted-foreground"}`}>{request.status === "approved" ? "Autorizzato" : "Rifiutato"}</span>}
+            <div>
+              <p className="font-medium">{request.first_name} {request.last_name}</p>
+              <p className="text-sm text-muted-foreground">{request.email}{request.phone ? ` · ${request.phone}` : ""}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {request.phone && <a href={waLink(`Ciao ${request.first_name}, ti scriviamo da NDP Esclusive Hair Saloon.`, request.phone)} target="_blank" rel="noreferrer" className="text-xs uppercase tracking-wider underline">WhatsApp</a>}
+              {request.status === "pending" ? <div className="flex gap-2">
+                <button onClick={() => reviewCustomer(request.id, "approved")} className="border border-accent px-3 py-2 text-xs uppercase tracking-wider">Autorizza</button>
+                <button onClick={() => reviewCustomer(request.id, "rejected")} className="border px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">Rifiuta</button>
+              </div> : <span className={`text-xs uppercase tracking-wider ${request.status === "approved" ? "text-accent" : "text-muted-foreground"}`}>{request.status === "approved" ? "Autorizzato" : "Rifiutato"}</span>}
+            </div>
           </li>)}
           {approvals.length === 0 && <li className="py-5 text-sm text-muted-foreground">Nessuna richiesta.</li>}
         </ul>
       </section>
+
+      <section className="mt-6 border p-4">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-accent">Lista d’attesa</p>
+        <h2 className="mt-1 font-serif text-3xl">Chi aspetta un posto</h2>
+        <ul className="mt-4 divide-y divide-border">
+          {waitlist.map((w) => (
+            <li key={w.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+              <span>{w.email}{w.phone ? ` · ${w.phone}` : ""} <span className="text-muted-foreground">· {w.day}</span></span>
+              <span className="flex gap-3 text-xs">
+                {w.phone && <a href={waLink(`Ciao, da NDP: si è liberato un posto il ${w.day}. Vuoi prenotarlo?`, w.phone)} target="_blank" rel="noreferrer" className="underline">Avvisa</a>}
+                <button onClick={async () => { await supabase.from("waitlist").update({ notified_at: new Date().toISOString() }).eq("id", w.id); load(); }} className="underline text-muted-foreground">Archivia</button>
+              </span>
+            </li>
+          ))}
+          {waitlist.length === 0 && <li className="py-4 text-sm text-muted-foreground">Nessuno in lista d’attesa.</li>}
+        </ul>
+      </section>
+
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {barbers.map((b) => (
@@ -185,14 +209,23 @@ function Dashboard({ userId }: { userId: string }) {
                 <li key={a.id} className={`border-l-2 p-2 text-sm ${a.status === "cancelled" ? "border-border opacity-50 line-through" : a.status === "completed" ? "border-graphite" : "border-accent"}`}>
                   <p className="font-medium">{fmtTime(a.starts_at)}–{fmtTime(a.ends_at)} · {a.services?.name}</p>
                   <p>{a.customer_name} · <a href={`tel:${a.customer_phone}`} className="underline">{a.customer_phone}</a></p>
-                  {a.notes && <p className="text-muted-foreground">{a.notes}</p>}
-                  <p className="text-xs text-muted-foreground">{a.code}</p>
-                  {a.status === "confirmed" && (
-                    <div className="mt-1 flex gap-3 text-xs">
+                  {a.notes && <p className="text-muted-foreground">Cliente: {a.notes}</p>}
+                  <p className="text-xs text-muted-foreground">{a.code} {a.whatsapp_sent_at ? "· WhatsApp inviato" : ""}</p>
+                  <textarea
+                    defaultValue={a.staff_notes ?? ""}
+                    onBlur={(e) => saveStaffNotes(a.id, e.target.value.trim())}
+                    rows={2}
+                    placeholder="Nota riservata staff (formula colore, preferenze…)"
+                    className="mt-2 w-full border bg-card px-2 py-1 text-xs outline-none focus:border-accent"
+                  />
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                    <a href={waLink(`Ciao ${a.customer_name.split(" ")[0]}, ti scriviamo da NDP per il tuo appuntamento ${a.code} alle ${fmtTime(a.starts_at)}.`, a.customer_phone)} target="_blank" rel="noreferrer" className="underline">WhatsApp</a>
+                    {a.status === "confirmed" && <>
                       <button onClick={() => setStatus(a.id, "completed")} className="underline">Completato</button>
                       <button onClick={() => setStatus(a.id, "cancelled")} className="text-destructive underline">Annulla</button>
-                    </div>
-                  )}
+                    </>}
+                  </div>
+
                 </li>
               ))}
               {!appts.some((a) => a.barber_id === b.id) && <li className="text-sm text-muted-foreground">Nessun appuntamento</li>}

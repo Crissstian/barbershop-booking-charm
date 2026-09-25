@@ -10,3 +10,8 @@
 ## Aperti / bloccati
 - Indirizzo, telefono, Instagram, orari reali: placeholder (serve info dal cliente)
 - Primo account creato su /admin diventa admin
+## Rifinitura estetica
+- [ ] Ingresso epico cinematografico
+- [ ] Homepage nero couture con schede interattive e passaggi animati
+- [ ] Transizioni animate nel percorso di prenotazione
+- [ ] Verifica mobile e desktop

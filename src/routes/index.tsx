@@ -72,7 +72,7 @@ function Home() {
         <ScrollReveal className="mx-auto max-w-6xl">
           <p className="text-[10px] uppercase tracking-[0.3em] text-accent">The Chair · La collezione</p>
           <h2 className="mt-4 max-w-2xl font-serif text-5xl leading-none md:text-7xl">Scegli la tua poltrona.</h2>
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">Tre professionisti, un rituale costruito intorno al tuo stile.</p>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-stone-muted">Tre professionisti, un rituale costruito intorno al tuo stile.</p>
         </ScrollReveal>
         <div className="mx-auto mt-16 max-w-6xl">
           {data.barbers.map((b, i) => {
@@ -110,7 +110,7 @@ function Home() {
           </div>
         </ScrollReveal>
         <div className="product-track mx-auto mt-16 flex max-w-6xl snap-x snap-mandatory gap-5 overflow-x-auto pb-6">
-          {products.map((product, i) => (
+          {products.map((product) => (
             <ScrollReveal key={product.number} className="min-w-[82%] snap-center sm:min-w-[48%] lg:min-w-[31%]">
               <article className="product-card group border border-walnut-line bg-walnut-card p-5">
                 <div className="product-stage relative flex aspect-[4/5] items-center justify-center overflow-hidden border border-walnut-line">

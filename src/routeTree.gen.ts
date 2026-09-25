@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as EsclusivaRouteImport } from './routes/esclusiva'
 import { Route as PrenotaRouteImport } from './routes/prenota'
 import { Route as PrenotazioneTokenRouteImport } from './routes/prenotazione.$token'
 
@@ -22,6 +23,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EsclusivaRoute = EsclusivaRouteImport.update({
+  id: '/esclusiva',
+  path: '/esclusiva',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrenotaRoute = PrenotaRouteImport.update({
@@ -38,12 +44,14 @@ const PrenotazioneTokenRoute = PrenotazioneTokenRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/esclusiva': typeof EsclusivaRoute
   '/prenota': typeof PrenotaRoute
   '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/esclusiva': typeof EsclusivaRoute
   '/prenota': typeof PrenotaRoute
   '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
@@ -51,20 +59,28 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/esclusiva': typeof EsclusivaRoute
   '/prenota': typeof PrenotaRoute
   '/prenotazione/$token': typeof PrenotazioneTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/prenota' | '/prenotazione/$token'
+  fullPaths: '/' | '/admin' | '/esclusiva' | '/prenota' | '/prenotazione/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/prenota' | '/prenotazione/$token'
-  id: '__root__' | '/' | '/admin' | '/prenota' | '/prenotazione/$token'
+  to: '/' | '/admin' | '/esclusiva' | '/prenota' | '/prenotazione/$token'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/esclusiva'
+    | '/prenota'
+    | '/prenotazione/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  EsclusivaRoute: typeof EsclusivaRoute
   PrenotaRoute: typeof PrenotaRoute
   PrenotazioneTokenRoute: typeof PrenotazioneTokenRoute
 }
@@ -83,6 +99,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/esclusiva': {
+      id: '/esclusiva'
+      path: '/esclusiva'
+      fullPath: '/esclusiva'
+      preLoaderRoute: typeof EsclusivaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prenota': {
@@ -105,6 +128,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  EsclusivaRoute: EsclusivaRoute,
   PrenotaRoute: PrenotaRoute,
   PrenotazioneTokenRoute: PrenotazioneTokenRoute,
 }

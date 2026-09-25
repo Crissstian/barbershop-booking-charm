@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, euro, fmtTime, romeDate } from "@/lib/format";
+import { notifyApprovedCustomer } from "@/lib/booking.functions";
+import { waLink } from "@/lib/salon";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -61,8 +64,10 @@ function Login() {
   );
 }
 
-type Appt = { id: string; starts_at: string; ends_at: string; status: string; customer_name: string; customer_phone: string; notes: string | null; code: string; barber_id: string; services: { name: string } | null };
-type Approval = { id: string; first_name: string; last_name: string; email: string; status: string; created_at: string };
+type Appt = { id: string; starts_at: string; ends_at: string; status: string; customer_name: string; customer_phone: string; notes: string | null; staff_notes: string | null; whatsapp_sent_at: string | null; code: string; barber_id: string; services: { name: string } | null };
+type Approval = { id: string; first_name: string; last_name: string; email: string; phone: string | null; status: string; created_at: string };
+type Wait = { id: string; email: string; phone: string | null; day: string; created_at: string };
+
 
 function Dashboard({ userId }: { userId: string }) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -71,22 +76,26 @@ function Dashboard({ userId }: { userId: string }) {
   const [appts, setAppts] = useState<Appt[]>([]);
   const [services, setServices] = useState<{ id: string; name: string; price: number; duration_min: number }[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [waitlist, setWaitlist] = useState<Wait[]>([]);
   const [block, setBlock] = useState({ barber: "", from: "13:00", to: "14:00", reason: "" });
 
   async function load() {
     const from = new Date(`${date}T00:00:00`).toISOString();
     const to = new Date(`${addDays(date, 1)}T00:00:00`).toISOString();
-    const [a, b, s, c] = await Promise.all([
-      supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,notes,code,barber_id,services(name)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
+    const [a, b, s, c, w] = await Promise.all([
+      supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,notes,staff_notes,whatsapp_sent_at,code,barber_id,services(name)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
       supabase.from("barbers").select("id,name").order("sort"),
       supabase.from("services").select("id,name,price,duration_min").order("sort"),
-      supabase.from("customer_approvals").select("id,first_name,last_name,email,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("customer_approvals").select("id,first_name,last_name,email,phone,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("waitlist").select("id,email,phone,day,created_at").is("notified_at", null).order("created_at", { ascending: false }),
     ]);
     setAppts((a.data as Appt[]) ?? []);
     setBarbers(b.data ?? []);
     setServices(s.data ?? []);
-    setApprovals(c.data ?? []);
+    setApprovals((c.data as Approval[]) ?? []);
+    setWaitlist((w.data as Wait[]) ?? []);
   }
+
 
   useEffect(() => {
     supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle().then(({ data }) => setIsAdmin(!!data));
@@ -118,11 +127,24 @@ function Dashboard({ userId }: { userId: string }) {
     await supabase.from("services").update({ price }).eq("id", id);
     toast.success("Prezzo aggiornato");
   }
+  async function saveStaffNotes(id: string, staff_notes: string) {
+    await supabase.from("appointments").update({ staff_notes: staff_notes || null }).eq("id", id);
+    toast.success("Nota riservata salvata");
+  }
   async function reviewCustomer(id: string, status: "approved" | "rejected") {
     const { error } = await supabase.from("customer_approvals").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) toast.error("Impossibile aggiornare la richiesta");
-    else { toast.success(status === "approved" ? "Cliente autorizzato" : "Richiesta rifiutata"); load(); }
+    else {
+      if (status === "approved") {
+        try {
+          const { sent } = await notifyApprovedCustomer({ data: { id } });
+          toast.success(sent ? "Cliente autorizzato e avvisato su WhatsApp" : "Cliente autorizzato");
+        } catch { toast.success("Cliente autorizzato"); }
+      } else toast.success("Richiesta rifiutata");
+      load();
+    }
   }
+
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-6">

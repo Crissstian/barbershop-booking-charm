@@ -14,16 +14,226 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          barber_id: string
+          code: string
+          created_at: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          ends_at: string
+          id: string
+          notes: string | null
+          service_id: string
+          starts_at: string
+          status: string
+          token: string
+        }
+        Insert: {
+          barber_id: string
+          code: string
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          ends_at: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          starts_at: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          barber_id?: string
+          code?: string
+          created_at?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          ends_at?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          starts_at?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barbers: {
+        Row: {
+          active: boolean
+          bio: string | null
+          created_at: string | null
+          id: string
+          name: string
+          role_title: string
+          sort: number
+        }
+        Insert: {
+          active?: boolean
+          bio?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          role_title?: string
+          sort?: number
+        }
+        Update: {
+          active?: boolean
+          bio?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          role_title?: string
+          sort?: number
+        }
+        Relationships: []
+      }
+      blocked_slots: {
+        Row: {
+          barber_id: string
+          ends_at: string
+          id: string
+          reason: string | null
+          starts_at: string
+        }
+        Insert: {
+          barber_id: string
+          ends_at: string
+          id?: string
+          reason?: string | null
+          starts_at: string
+        }
+        Update: {
+          barber_id?: string
+          ends_at?: string
+          id?: string
+          reason?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_slots_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          active: boolean
+          description: string | null
+          duration_min: number
+          id: string
+          name: string
+          price: number
+          sort: number
+        }
+        Insert: {
+          active?: boolean
+          description?: string | null
+          duration_min: number
+          id?: string
+          name: string
+          price: number
+          sort?: number
+        }
+        Update: {
+          active?: boolean
+          description?: string | null
+          duration_min?: number
+          id?: string
+          name?: string
+          price?: number
+          sort?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      working_hours: {
+        Row: {
+          barber_id: string
+          end_time: string
+          id: string
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          barber_id: string
+          end_time: string
+          id?: string
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          barber_id?: string
+          end_time?: string
+          id?: string
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "working_hours_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +360,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

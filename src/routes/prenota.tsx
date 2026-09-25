@@ -3,7 +3,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { checkCustomerApproval, createBooking, getSlots, requestCustomerApproval } from "@/lib/booking.functions";
+import { checkCustomerApproval, createBooking, getSlots, joinWaitlist, requestCustomerApproval } from "@/lib/booking.functions";
 import { catalogQuery } from "./index";
 import { addDays, euro, fmtDay, fmtTime, romeDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -37,8 +37,10 @@ function Booking() {
   const [slot, setSlot] = useState<{ start: string; barberId: string } | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [sending, setSending] = useState(false);
-  const [identity, setIdentity] = useState({ firstName: "", lastName: "", email: "" });
+  const [identity, setIdentity] = useState({ firstName: "", lastName: "", email: "", phone: "", inviteCode: "" });
   const [access, setAccess] = useState<"checking" | "approved" | "pending" | "request">("checking");
+  const [waiting, setWaiting] = useState(false);
+
 
   const service = data.services.find((s) => s.id === serviceId);
   const slots = useQuery({
@@ -56,10 +58,11 @@ function Booking() {
       const result = await checkCustomerApproval({ data: { email: identity.email } });
       if (result.status === "approved") {
         setIdentity((current) => ({ ...current, email: current.email.trim().toLowerCase() }));
-        setForm((current) => ({ ...current, email: identity.email.trim().toLowerCase() }));
+        setForm((current) => ({ ...current, email: identity.email.trim().toLowerCase(), phone: current.phone || result.phone }));
         setAccess("approved");
       } else if (result.status === "pending") setAccess("pending");
       else setAccess("request");
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Impossibile verificare l’accesso");
     } finally { setSending(false); }
@@ -69,11 +72,12 @@ function Booking() {
     e.preventDefault();
     setSending(true);
     try {
-      const result = await requestCustomerApproval({ data: identity });
+      const result = await requestCustomerApproval({ data: { ...identity, phone: identity.phone || undefined, inviteCode: identity.inviteCode || undefined } });
       if (result.status === "approved") {
-        setForm((current) => ({ ...current, name: `${identity.firstName} ${identity.lastName}`.trim(), email: identity.email.trim().toLowerCase() }));
+        setForm((current) => ({ ...current, name: `${identity.firstName} ${identity.lastName}`.trim(), email: identity.email.trim().toLowerCase(), phone: identity.phone }));
         setAccess("approved");
       } else setAccess("pending");
+
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Impossibile inviare la richiesta");
     } finally { setSending(false); }
@@ -112,8 +116,13 @@ function Booking() {
             {access === "request" && <>
               <label className="block text-sm">Nome<input required minLength={2} maxLength={50} value={identity.firstName} onChange={(e) => setIdentity({ ...identity, firstName: e.target.value })} className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
               <label className="block text-sm">Cognome<input required minLength={2} maxLength={50} value={identity.lastName} onChange={(e) => setIdentity({ ...identity, lastName: e.target.value })} className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
+              <label className="block text-sm">WhatsApp<input required type="tel" minLength={6} maxLength={25} value={identity.phone} onChange={(e) => setIdentity({ ...identity, phone: e.target.value })} placeholder="+39 333 1234567" className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
             </>}
             <label className="block text-sm">Email<input required type="email" maxLength={120} value={identity.email} onChange={(e) => setIdentity({ ...identity, email: e.target.value })} className="mt-1 w-full border bg-background px-3 py-3 outline-none focus:border-accent" /></label>
+            {access === "request" && (
+              <label className="block text-sm">Codice invito (se lo hai)<input maxLength={40} value={identity.inviteCode} onChange={(e) => setIdentity({ ...identity, inviteCode: e.target.value })} placeholder="Accesso immediato" className="mt-1 w-full border bg-background px-3 py-3 uppercase tracking-[0.2em] outline-none focus:border-accent" /></label>
+            )}
+
             <Button disabled={sending} className="h-auto w-full rounded-none py-4 uppercase tracking-[0.22em]">
               {sending ? "Attendi…" : access === "request" ? "Invia richiesta" : "Continua"}
             </Button>
@@ -126,7 +135,9 @@ function Booking() {
 
   return (
     <main className="mx-auto min-h-screen max-w-xl px-6 py-6">
+      <div className="page-curtain" aria-hidden="true" />
       <header className="flex items-center justify-between">
+
         <Link to="/" className="font-serif text-xl tracking-[0.3em]">NDP</Link>
         <span className="text-xs uppercase tracking-widest text-muted-foreground">{step + 1} / 4 · {STEPS[step]}</span>
       </header>
@@ -182,12 +193,32 @@ function Booking() {
           </div>
           <div className="mt-6 grid grid-cols-4 gap-2">
             {slots.isLoading && <p className="col-span-4 text-sm text-muted-foreground">Cerco gli orari…</p>}
-            {slots.data?.length === 0 && <p className="col-span-4 text-sm text-muted-foreground">Nessun orario libero in questo giorno. Prova un altro giorno.</p>}
+            {slots.data?.length === 0 && (
+              <div className="col-span-4 border-l-2 border-accent bg-secondary p-4 text-left">
+                <p className="text-sm text-muted-foreground">Nessun orario libero in questo giorno.</p>
+                <button
+                  type="button"
+                  disabled={waiting}
+                  onClick={async () => {
+                    setWaiting(true);
+                    try {
+                      await joinWaitlist({ data: { email: form.email, phone: form.phone || undefined, barberId, serviceId, day: date } });
+                      toast.success("Sei in lista d’attesa: ti avvisiamo se si libera un posto.");
+                    } catch (err) { toast.error(err instanceof Error ? err.message : "Errore"); }
+                    finally { setWaiting(false); }
+                  }}
+                  className="mt-3 text-sm uppercase tracking-[0.2em] underline"
+                >
+                  {waiting ? "Attendi…" : "Avvisami se si libera"}
+                </button>
+              </div>
+            )}
             {slots.data?.map((s) => (
-              <button key={s.start} onClick={() => { setSlot(s); setStep(3); }} className={`border py-3 text-sm ${slot?.start === s.start ? active : ""}`}>
+              <button key={s.start} data-selected={slot?.start === s.start} onClick={() => { setSlot(s); setStep(3); }} className={`slot-chip border py-3 text-sm ${slot?.start === s.start ? active : ""}`}>
                 {fmtTime(s.start)}
               </button>
             ))}
+
           </div>
         </section>
       )}

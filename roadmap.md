@@ -17,8 +17,8 @@
 - [x] Verifica mobile e desktop
 
 ## Warm luxury editorial
-- [ ] Nero come base con fasce grigio pietra e marrone noce
-- [ ] Rimuovere tutte le fotografie dei barbieri
-- [ ] Schede professionisti tipografiche animate
-- [ ] Sezione prodotti animata
-- [ ] Verifica mobile e desktop
+- [x] Nero come base con fasce grigio pietra e marrone noce
+- [x] Rimuovere tutte le fotografie dei barbieri
+- [x] Schede professionisti tipografiche animate
+- [x] Sezione prodotti animata
+- [x] Verifica mobile e desktop

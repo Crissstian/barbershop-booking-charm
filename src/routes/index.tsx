@@ -4,6 +4,10 @@ import { getCatalog } from "@/lib/booking.functions";
 import { fmtShort, fmtTime, euro } from "@/lib/format";
 import logo from "@/assets/ndp-logo.png.asset.json";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import { SplitText } from "@/components/split-text";
+import { Tilt } from "@/components/tilt-card";
+import { SALON, waLink } from "@/lib/salon";
+
 import nicolaPortrait from "@/assets/barber-nicola.jpg";
 import danielePortrait from "@/assets/barber-daniele.jpg";
 import antonioPortrait from "@/assets/barber-antonio.jpg";
@@ -80,7 +84,7 @@ function Home() {
       <section className="tailor-band px-6 py-24">
         <ScrollReveal className="mx-auto max-w-6xl">
           <p className="text-[10px] uppercase tracking-[0.3em] text-accent">The Chair · La collezione</p>
-          <h2 className="mt-4 max-w-2xl font-serif text-5xl leading-none md:text-7xl">Scegli la tua poltrona.</h2>
+          <SplitText text="Scegli la tua poltrona." className="mt-4 max-w-2xl font-serif text-5xl leading-none md:text-7xl" />
           <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">Tre professionisti, un rituale costruito intorno al tuo stile.</p>
         </ScrollReveal>
         <div className="mx-auto mt-16 max-w-6xl">
@@ -88,6 +92,7 @@ function Home() {
             const n = data.next.find((x) => x.barberId === b.id);
             return (
               <ScrollReveal key={b.id}>
+                <Tilt intensity={5}>
                 <Link to="/prenota" search={{ barber: b.id }} className="chair-card group relative grid min-h-[34rem] overflow-hidden border border-border bg-card md:grid-cols-[.85fr_1fr]">
                   <div className="relative min-h-96 overflow-hidden">
                     <img src={portraits[i]} alt={`${b.name}, ${b.role_title}`} loading="lazy" width={1200} height={1600} className="barber-portrait absolute inset-0 h-full w-full object-cover" />
@@ -105,6 +110,8 @@ function Home() {
                     </div>
                   </div>
                 </Link>
+                </Tilt>
+
               </ScrollReveal>
             );
           })}
@@ -116,7 +123,7 @@ function Home() {
           <div className="flex items-end justify-between gap-8">
             <div>
               <p className="text-[10px] uppercase tracking-[0.3em] text-champagne">NDP Essentials</p>
-              <h2 className="mt-4 max-w-xl font-serif text-5xl leading-none md:text-7xl">Il rituale continua.</h2>
+              <SplitText text="Il rituale continua." className="mt-4 max-w-xl font-serif text-5xl leading-none md:text-7xl" />
             </div>
             <p className="hidden max-w-xs text-sm text-muted-foreground md:block">Una selezione essenziale per mantenere forma, texture e carattere ogni giorno.</p>
           </div>
@@ -124,6 +131,7 @@ function Home() {
         <div className="product-track mx-auto mt-16 flex max-w-6xl snap-x snap-mandatory gap-5 overflow-x-auto pb-6">
           {products.map((product) => (
             <ScrollReveal key={product.number} className="min-w-[82%] snap-center sm:min-w-[48%] lg:min-w-[31%]">
+              <Tilt intensity={9}>
               <article className="product-card group border border-border bg-card p-5">
                 <div className="product-stage relative flex aspect-[4/5] items-center justify-center overflow-hidden border border-border">
                   <span className="absolute left-4 top-4 font-serif text-4xl text-border">{product.number}</span>
@@ -137,6 +145,8 @@ function Home() {
                 <p className="mt-2 text-sm text-muted-foreground">{product.note}</p>
                 <p className="mt-6 border-t border-border pt-4 text-[10px] uppercase tracking-[0.2em]">Disponibile in salone</p>
               </article>
+              </Tilt>
+
             </ScrollReveal>
           ))}
         </div>
@@ -146,7 +156,7 @@ function Home() {
         <ScrollReveal className="md:grid md:grid-cols-[1fr_1.35fr] md:gap-20">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] text-accent">I servizi</p>
-            <h2 className="mt-4 font-serif text-5xl leading-none md:text-7xl">Precisione, senza compromessi.</h2>
+            <SplitText text="Precisione, senza compromessi." className="mt-4 font-serif text-5xl leading-none md:text-7xl" />
           </div>
         <ul className="mt-12 divide-y divide-border md:mt-0">
           {data.services.map((s) => (
@@ -168,9 +178,11 @@ function Home() {
         <ScrollReveal>
           <p className="font-serif text-4xl text-foreground">Il salone</p>
           <div className="mx-auto my-6 h-px w-16 bg-accent" />
-          <p>Via Esempio 1, Città (indirizzo da confermare)</p>
-          <p>Mar–Sab 9:00–13:00 · 14:30–19:30</p>
-          <p>Tel. +39 000 000 0000 · @ndp.hairsaloon</p>
+          <p>{SALON.address} (indirizzo da confermare)</p>
+          <p>{SALON.hours}</p>
+          <p>Tel. {SALON.phoneDisplay} · {SALON.instagram}</p>
+          <a href={waLink("Ciao NDP, vorrei un'informazione.")} target="_blank" rel="noreferrer" className="wa-cta mt-6 inline-block border border-accent/60 px-6 py-3 text-[10px] uppercase tracking-[0.25em] text-foreground transition-transform hover:-translate-y-0.5">Scrivici su WhatsApp</a>
+
         </ScrollReveal>
       </section>
 

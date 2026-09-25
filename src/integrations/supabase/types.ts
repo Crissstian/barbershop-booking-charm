@@ -25,10 +25,13 @@ export type Database = {
           ends_at: string
           id: string
           notes: string | null
+          reminder_sent_at: string | null
           service_id: string
+          staff_notes: string | null
           starts_at: string
           status: string
           token: string
+          whatsapp_sent_at: string | null
         }
         Insert: {
           barber_id: string
@@ -40,10 +43,13 @@ export type Database = {
           ends_at: string
           id?: string
           notes?: string | null
+          reminder_sent_at?: string | null
           service_id: string
+          staff_notes?: string | null
           starts_at: string
           status?: string
           token?: string
+          whatsapp_sent_at?: string | null
         }
         Update: {
           barber_id?: string
@@ -55,10 +61,13 @@ export type Database = {
           ends_at?: string
           id?: string
           notes?: string | null
+          reminder_sent_at?: string | null
           service_id?: string
+          staff_notes?: string | null
           starts_at?: string
           status?: string
           token?: string
+          whatsapp_sent_at?: string | null
         }
         Relationships: [
           {
@@ -145,7 +154,9 @@ export type Database = {
           email: string
           first_name: string
           id: string
+          invited_with: string | null
           last_name: string
+          phone: string | null
           reviewed_at: string | null
           status: string
         }
@@ -154,7 +165,9 @@ export type Database = {
           email: string
           first_name: string
           id?: string
+          invited_with?: string | null
           last_name: string
+          phone?: string | null
           reviewed_at?: string | null
           status?: string
         }
@@ -163,7 +176,9 @@ export type Database = {
           email?: string
           first_name?: string
           id?: string
+          invited_with?: string | null
           last_name?: string
+          phone?: string | null
           reviewed_at?: string | null
           status?: string
         }
@@ -216,6 +231,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      waitlist: {
+        Row: {
+          barber_id: string | null
+          created_at: string
+          day: string
+          email: string
+          id: string
+          notified_at: string | null
+          phone: string | null
+          service_id: string | null
+        }
+        Insert: {
+          barber_id?: string | null
+          created_at?: string
+          day: string
+          email: string
+          id?: string
+          notified_at?: string | null
+          phone?: string | null
+          service_id?: string | null
+        }
+        Update: {
+          barber_id?: string | null
+          created_at?: string
+          day?: string
+          email?: string
+          id?: string
+          notified_at?: string | null
+          phone?: string | null
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       working_hours: {
         Row: {

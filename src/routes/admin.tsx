@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { addDays, euro, fmtTime, romeDate } from "@/lib/format";
+import { notifyApprovedCustomer } from "@/lib/booking.functions";
+import { waLink } from "@/lib/salon";
+
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -61,8 +64,10 @@ function Login() {
   );
 }
 
-type Appt = { id: string; starts_at: string; ends_at: string; status: string; customer_name: string; customer_phone: string; notes: string | null; code: string; barber_id: string; services: { name: string } | null };
-type Approval = { id: string; first_name: string; last_name: string; email: string; status: string; created_at: string };
+type Appt = { id: string; starts_at: string; ends_at: string; status: string; customer_name: string; customer_phone: string; notes: string | null; staff_notes: string | null; whatsapp_sent_at: string | null; code: string; barber_id: string; services: { name: string } | null };
+type Approval = { id: string; first_name: string; last_name: string; email: string; phone: string | null; status: string; created_at: string };
+type Wait = { id: string; email: string; phone: string | null; day: string; created_at: string };
+
 
 function Dashboard({ userId }: { userId: string }) {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -71,22 +76,26 @@ function Dashboard({ userId }: { userId: string }) {
   const [appts, setAppts] = useState<Appt[]>([]);
   const [services, setServices] = useState<{ id: string; name: string; price: number; duration_min: number }[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [waitlist, setWaitlist] = useState<Wait[]>([]);
   const [block, setBlock] = useState({ barber: "", from: "13:00", to: "14:00", reason: "" });
 
   async function load() {
     const from = new Date(`${date}T00:00:00`).toISOString();
     const to = new Date(`${addDays(date, 1)}T00:00:00`).toISOString();
-    const [a, b, s, c] = await Promise.all([
-      supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,notes,code,barber_id,services(name)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
+    const [a, b, s, c, w] = await Promise.all([
+      supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,notes,staff_notes,whatsapp_sent_at,code,barber_id,services(name)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
       supabase.from("barbers").select("id,name").order("sort"),
       supabase.from("services").select("id,name,price,duration_min").order("sort"),
-      supabase.from("customer_approvals").select("id,first_name,last_name,email,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("customer_approvals").select("id,first_name,last_name,email,phone,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("waitlist").select("id,email,phone,day,created_at").is("notified_at", null).order("created_at", { ascending: false }),
     ]);
     setAppts((a.data as Appt[]) ?? []);
     setBarbers(b.data ?? []);
     setServices(s.data ?? []);
-    setApprovals(c.data ?? []);
+    setApprovals((c.data as Approval[]) ?? []);
+    setWaitlist((w.data as Wait[]) ?? []);
   }
+
 
   useEffect(() => {
     supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle().then(({ data }) => setIsAdmin(!!data));
@@ -118,11 +127,24 @@ function Dashboard({ userId }: { userId: string }) {
     await supabase.from("services").update({ price }).eq("id", id);
     toast.success("Prezzo aggiornato");
   }
+  async function saveStaffNotes(id: string, staff_notes: string) {
+    await supabase.from("appointments").update({ staff_notes: staff_notes || null }).eq("id", id);
+    toast.success("Nota riservata salvata");
+  }
   async function reviewCustomer(id: string, status: "approved" | "rejected") {
     const { error } = await supabase.from("customer_approvals").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) toast.error("Impossibile aggiornare la richiesta");
-    else { toast.success(status === "approved" ? "Cliente autorizzato" : "Richiesta rifiutata"); load(); }
+    else {
+      if (status === "approved") {
+        try {
+          const { sent } = await notifyApprovedCustomer({ data: { id } });
+          toast.success(sent ? "Cliente autorizzato e avvisato su WhatsApp" : "Cliente autorizzato");
+        } catch { toast.success("Cliente autorizzato"); }
+      } else toast.success("Richiesta rifiutata");
+      load();
+    }
   }
+
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-6">
@@ -144,15 +166,39 @@ function Dashboard({ userId }: { userId: string }) {
         </div>
         <ul className="mt-5 divide-y divide-border">
           {approvals.map((request) => <li key={request.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><p className="font-medium">{request.first_name} {request.last_name}</p><p className="text-sm text-muted-foreground">{request.email}</p></div>
-            {request.status === "pending" ? <div className="flex gap-2">
-              <button onClick={() => reviewCustomer(request.id, "approved")} className="border border-accent px-3 py-2 text-xs uppercase tracking-wider">Autorizza</button>
-              <button onClick={() => reviewCustomer(request.id, "rejected")} className="border px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">Rifiuta</button>
-            </div> : <span className={`text-xs uppercase tracking-wider ${request.status === "approved" ? "text-accent" : "text-muted-foreground"}`}>{request.status === "approved" ? "Autorizzato" : "Rifiutato"}</span>}
+            <div>
+              <p className="font-medium">{request.first_name} {request.last_name}</p>
+              <p className="text-sm text-muted-foreground">{request.email}{request.phone ? ` · ${request.phone}` : ""}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {request.phone && <a href={waLink(`Ciao ${request.first_name}, ti scriviamo da NDP Esclusive Hair Saloon.`, request.phone)} target="_blank" rel="noreferrer" className="text-xs uppercase tracking-wider underline">WhatsApp</a>}
+              {request.status === "pending" ? <div className="flex gap-2">
+                <button onClick={() => reviewCustomer(request.id, "approved")} className="border border-accent px-3 py-2 text-xs uppercase tracking-wider">Autorizza</button>
+                <button onClick={() => reviewCustomer(request.id, "rejected")} className="border px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">Rifiuta</button>
+              </div> : <span className={`text-xs uppercase tracking-wider ${request.status === "approved" ? "text-accent" : "text-muted-foreground"}`}>{request.status === "approved" ? "Autorizzato" : "Rifiutato"}</span>}
+            </div>
           </li>)}
           {approvals.length === 0 && <li className="py-5 text-sm text-muted-foreground">Nessuna richiesta.</li>}
         </ul>
       </section>
+
+      <section className="mt-6 border p-4">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-accent">Lista d’attesa</p>
+        <h2 className="mt-1 font-serif text-3xl">Chi aspetta un posto</h2>
+        <ul className="mt-4 divide-y divide-border">
+          {waitlist.map((w) => (
+            <li key={w.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+              <span>{w.email}{w.phone ? ` · ${w.phone}` : ""} <span className="text-muted-foreground">· {w.day}</span></span>
+              <span className="flex gap-3 text-xs">
+                {w.phone && <a href={waLink(`Ciao, da NDP: si è liberato un posto il ${w.day}. Vuoi prenotarlo?`, w.phone)} target="_blank" rel="noreferrer" className="underline">Avvisa</a>}
+                <button onClick={async () => { await supabase.from("waitlist").update({ notified_at: new Date().toISOString() }).eq("id", w.id); load(); }} className="underline text-muted-foreground">Archivia</button>
+              </span>
+            </li>
+          ))}
+          {waitlist.length === 0 && <li className="py-4 text-sm text-muted-foreground">Nessuno in lista d’attesa.</li>}
+        </ul>
+      </section>
+
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         {barbers.map((b) => (
@@ -163,14 +209,23 @@ function Dashboard({ userId }: { userId: string }) {
                 <li key={a.id} className={`border-l-2 p-2 text-sm ${a.status === "cancelled" ? "border-border opacity-50 line-through" : a.status === "completed" ? "border-graphite" : "border-accent"}`}>
                   <p className="font-medium">{fmtTime(a.starts_at)}–{fmtTime(a.ends_at)} · {a.services?.name}</p>
                   <p>{a.customer_name} · <a href={`tel:${a.customer_phone}`} className="underline">{a.customer_phone}</a></p>
-                  {a.notes && <p className="text-muted-foreground">{a.notes}</p>}
-                  <p className="text-xs text-muted-foreground">{a.code}</p>
-                  {a.status === "confirmed" && (
-                    <div className="mt-1 flex gap-3 text-xs">
+                  {a.notes && <p className="text-muted-foreground">Cliente: {a.notes}</p>}
+                  <p className="text-xs text-muted-foreground">{a.code} {a.whatsapp_sent_at ? "· WhatsApp inviato" : ""}</p>
+                  <textarea
+                    defaultValue={a.staff_notes ?? ""}
+                    onBlur={(e) => saveStaffNotes(a.id, e.target.value.trim())}
+                    rows={2}
+                    placeholder="Nota riservata staff (formula colore, preferenze…)"
+                    className="mt-2 w-full border bg-card px-2 py-1 text-xs outline-none focus:border-accent"
+                  />
+                  <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                    <a href={waLink(`Ciao ${a.customer_name.split(" ")[0]}, ti scriviamo da NDP per il tuo appuntamento ${a.code} alle ${fmtTime(a.starts_at)}.`, a.customer_phone)} target="_blank" rel="noreferrer" className="underline">WhatsApp</a>
+                    {a.status === "confirmed" && <>
                       <button onClick={() => setStatus(a.id, "completed")} className="underline">Completato</button>
                       <button onClick={() => setStatus(a.id, "cancelled")} className="text-destructive underline">Annulla</button>
-                    </div>
-                  )}
+                    </>}
+                  </div>
+
                 </li>
               ))}
               {!appts.some((a) => a.barber_id === b.id) && <li className="text-sm text-muted-foreground">Nessun appuntamento</li>}

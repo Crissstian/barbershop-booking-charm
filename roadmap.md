@@ -1,19 +1,12 @@
 # NDP — Esclusive Hair Saloon
 
 ## Task list
-- [ ] Database schema (barbers, services, availability, blocked_slots, customers, appointments, settings, user_roles)
-- [ ] Seed iniziale (Nicola, Daniele, Antonio + servizi + orari)
-- [ ] Design system (bianco/nero/grafite/champagne, serif + sans)
-- [ ] Intro animata + Hero + bottom booking bar
-- [ ] The Chair (3 poltrone, prossimo slot reale) + Prima disponibilità
-- [ ] Booking flow 5 step senza login + smart slot matcher
-- [ ] Conferma + codice prenotazione + link gestione (/prenotazione/$token)
-- [ ] Pagine professionisti / salone
-- [ ] Admin: login, dashboard, calendario CRUD, disponibilità, clienti, servizi
-- [ ] SEO metadata per route
-- [ ] Verifica end-to-end mobile
+- [x] Database + seed (Nicola, Daniele, Antonio, servizi, orari Mar–Sab)
+- [x] Design system + logo + favicon
+- [x] Intro, Hero, The Chair, prima disponibilità, servizi, barra prenota
+- [x] Prenotazione 4 step senza login + conferma con codice e link gestione
+- [x] Area staff: agenda giornaliera, stato appuntamenti, blocco orari, prezzi
 
 ## Aperti / bloccati
-- Logo NDP: file non ancora ricevuto (monogramma tipografico temporaneo)
-- Indirizzo, telefono, Instagram, orari reali: placeholder evidenti
-- Email admin: da definire (primo account registrato su /auth diventa admin)
+- Indirizzo, telefono, Instagram, orari reali: placeholder (serve info dal cliente)
+- Primo account creato su /admin diventa admin

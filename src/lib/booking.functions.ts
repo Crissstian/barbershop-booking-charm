@@ -181,7 +181,7 @@ export const getBooking = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin.from("appointments")
-      .select("code,starts_at,ends_at,status,customer_name,barbers(name),services(name,price,duration_min)")
+      .select("code,starts_at,ends_at,status,customer_name,whatsapp_sent_at,barbers(name),services(name,price,duration_min)")
       .eq("token", data.token).maybeSingle();
     return row;
   });

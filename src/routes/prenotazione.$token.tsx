@@ -28,7 +28,7 @@ function Page() {
   const { data } = useSuspenseQuery(q(token));
   const qc = useQueryClient();
   if (!data) return <main className="p-10 text-center font-serif text-2xl">Prenotazione non trovata.</main>;
-  const b = data as unknown as { code: string; starts_at: string; ends_at: string; status: string; customer_name: string; barbers: { name: string }; services: { name: string; price: number; duration_min: number } };
+  const b = data as unknown as { code: string; starts_at: string; ends_at: string; status: string; customer_name: string; whatsapp_sent_at: string | null; barbers: { name: string }; services: { name: string; price: number; duration_min: number } };
   const cancelled = b.status === "cancelled";
   const future = Date.parse(b.starts_at) > Date.now();
   const event = {
@@ -65,7 +65,7 @@ function Page() {
           >
             Scrivi al salone su WhatsApp
           </a>
-          <p className="mt-3 text-xs text-muted-foreground">Ti abbiamo inviato la conferma su WhatsApp al tuo numero.</p>
+          {b.whatsapp_sent_at && <p className="mt-3 text-xs text-muted-foreground">Ti abbiamo inviato la conferma su WhatsApp al tuo numero.</p>}
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <a href={googleCalendarUrl(event)} target="_blank" rel="noreferrer" className="border py-3 text-[10px] uppercase tracking-[0.2em] transition-colors hover:border-accent">Google Calendar</a>

@@ -81,7 +81,7 @@ export async function getNextSlots(dur: number) {
   return data.barbers.map((b) => {
     for (let i = 0; i <= 21; i++) {
       const s = barberSlots(data, b.id, addDays(from, i), dur);
-      if (s.length) return { barberId: b.id, start: new Date(s[0]).toISOString() };
+      if (s.length) return { barberId: b.id, start: new Date(s[0]!).toISOString() };
     }
     return { barberId: b.id, start: null as string | null };
   });

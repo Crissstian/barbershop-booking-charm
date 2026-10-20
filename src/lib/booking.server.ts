@@ -51,7 +51,7 @@ type Busy = { barber_id: string; s: number; e: number };
 export type SkipOccurrence = { recurringId: string; date: string };
 
 /** Occorrenze dei clienti fissi come intervalli occupati (regole attive meno eccezioni). */
-export async function recurringBusy(fromDate: string, toDate: string, opts: { skip?: SkipOccurrence; excludeRuleId?: string } = {}) {
+export async function recurringBusy(fromDate: string, toDate: string, opts: { skip?: SkipOccurrence | undefined; excludeRuleId?: string | undefined } = {}) {
   const [rules, exc] = await Promise.all([
     supabaseAdmin.from("recurring_appointments").select("id,barber_id,service_id,weekday,start_time,interval_weeks,start_date,end_date,active,services(duration_min)").eq("active", true).lte("start_date", toDate),
     supabaseAdmin.from("recurring_exceptions").select("recurring_id,occurrence_date").gte("occurrence_date", fromDate).lte("occurrence_date", toDate),

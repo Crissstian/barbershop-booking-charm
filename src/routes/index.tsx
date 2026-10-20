@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getCatalog } from "@/lib/booking.functions";
-import { fmtShort, fmtTime, euro } from "@/lib/format";
+import { fmtShort, fmtTime, servicePrice } from "@/lib/format";
 import logo from "@/assets/ndp-logo.png.asset.json";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { SplitText } from "@/components/split-text";
@@ -72,7 +72,7 @@ function Home() {
         <div className="hero-halo" aria-hidden="true" />
         <p className="hero-copy relative z-10 mb-4 text-[9px] uppercase tracking-[0.4em] text-foreground/70">Esclusive Hair Saloon</p>
         <img src={logo.url} alt="NDP Nicola De Pompeis — Esclusive Hair Saloon" className="hero-logo relative z-10 w-full max-w-md" />
-        <p className="hero-copy relative z-10 mx-auto mt-3 max-w-sm font-serif text-2xl italic text-foreground/75">Tre poltrone. Un solo standard.</p>
+        <p className="hero-copy relative z-10 mx-auto mt-3 max-w-sm font-serif text-2xl italic text-foreground/75">Quattro professionisti. Un solo standard.</p>
         {next && (
           <Link
             to="/prenota"
@@ -116,7 +116,7 @@ function Home() {
                   <div className="relative z-10 flex flex-col justify-end p-7 md:p-10">
                     <p className="text-[10px] uppercase tracking-[0.22em] text-accent">{b.role_title}</p>
                     <h3 className="mt-2 font-serif text-6xl leading-none md:text-7xl">{b.name}</h3>
-                    <p className="mt-5 max-w-lg text-sm text-muted-foreground">{b.bio}</p>
+                    {b.bio && <p className="mt-5 max-w-lg text-sm text-muted-foreground">{b.bio}</p>}
                     <div className="mt-10 border-t border-border pt-5">
                     <p className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Prossimo orario</p>
                     <p className="mt-2 font-serif text-xl">{n?.start ? <><span className="capitalize">{fmtShort(n.start)}</span> · {fmtTime(n.start)}</> : "Da definire"}</p>
@@ -178,9 +178,9 @@ function Home() {
               <Link to="/prenota" search={{ service: s.id }} className="service-row group flex items-baseline justify-between gap-4 py-6">
                 <span>
                   <span className="font-serif text-2xl transition-colors group-hover:text-accent">{s.name}</span>
-                  <span className="block text-sm text-muted-foreground">{s.description} · {s.duration_min} min</span>
+                   <span className="block text-sm capitalize text-muted-foreground">{s.category} · {s.description ? `${s.description} · ` : ""}{s.duration_min} min</span>
                 </span>
-                <span className="font-serif text-xl transition-transform group-hover:-translate-x-2">{euro(Number(s.price))}</span>
+                 <span className="shrink-0 whitespace-nowrap font-serif text-xl transition-transform group-hover:-translate-x-2">{servicePrice(s)}</span>
               </Link>
             </li>
           ))}

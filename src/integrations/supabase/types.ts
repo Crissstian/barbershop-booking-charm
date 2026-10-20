@@ -147,6 +147,7 @@ export type Database = {
           name: string
           photo_url: string | null
           role_title: string
+          service_categories: string[]
           slug: string | null
           sort: number
         }
@@ -158,6 +159,7 @@ export type Database = {
           name: string
           photo_url?: string | null
           role_title?: string
+          service_categories?: string[]
           slug?: string | null
           sort?: number
         }
@@ -169,6 +171,7 @@ export type Database = {
           name?: string
           photo_url?: string | null
           role_title?: string
+          service_categories?: string[]
           slug?: string | null
           sort?: number
         }
@@ -295,29 +298,35 @@ export type Database = {
       services: {
         Row: {
           active: boolean
+          category: string
           description: string | null
           duration_min: number
           id: string
           name: string
           price: number
+          price_from: boolean
           sort: number
         }
         Insert: {
           active?: boolean
+          category?: string
           description?: string | null
           duration_min: number
           id?: string
           name: string
           price: number
+          price_from?: boolean
           sort?: number
         }
         Update: {
           active?: boolean
+          category?: string
           description?: string | null
           duration_min?: number
           id?: string
           name?: string
           price?: number
+          price_from?: boolean
           sort?: number
         }
         Relationships: []

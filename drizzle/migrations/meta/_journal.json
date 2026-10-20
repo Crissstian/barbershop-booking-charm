@@ -29,6 +29,13 @@
       "when": 1792510309391,
       "tag": "0003_salon_operations_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792511629838,
+      "tag": "0004_official_services_and_staff_bootstrap",
+      "breakpoints": true
     }
   ]
 }

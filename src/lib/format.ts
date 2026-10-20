@@ -11,3 +11,4 @@ export const addDays = (date: string, n: number) => {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 };
 export const euro = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+export const servicePrice = (s: { price: number | string; price_from?: boolean }) => `${s.price_from ? "da " : ""}${euro(Number(s.price))}`;

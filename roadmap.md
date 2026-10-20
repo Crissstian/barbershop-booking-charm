@@ -60,3 +60,10 @@
 - [x] Vincolo anti doppia prenotazione nel database
 - [x] "Tutto pieno? Contattaci"
 - [ ] Verifica visiva area staff da loggati (bloccato: nessun account staff creato)
+
+## Fase — Staff, clienti fissi, prodotti, Membership
+- [x] Foto ufficiali staff per slug + 6 prodotti Davines da database
+- [x] Admin a sezioni: Clienti, Clienti fissi, Staff & orari, Servizi, Prodotti
+- [x] Orari, assenze, servizi per professionista
+- [x] Ricorrenze settimanali/bisettimanali nella disponibilità e in agenda (badge FISSO)
+- [x] Membership: lacca ogni 20, gift card 30/anno, barba compleanno

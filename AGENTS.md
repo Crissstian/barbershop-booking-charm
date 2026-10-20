@@ -16,6 +16,8 @@
 - Double booking is blocked by the `appointments_no_overlap` EXCLUDE constraint (confirmed only); server maps SQLSTATE 23P01 to a user message. Why: atomic protection.
 - Admin writes on appointments/approvals go through `src/lib/admin.functions.ts` / `reviewCustomerApproval` with server-side has_role checks. Why: UI is not a security boundary.
 - Revenue = SUM(amount_paid) of completed+paid appointments only (`src/lib/report.ts`, tested). Why: complimentary/pending must not count.
+- Recurring clients are computed rules (`recurring-rules.ts`) plus `recurring_exceptions`; real actions materialize one appointment (unique recurring_id+occurrence_date). Why: no thousands of future rows, no duplicates.
+- Membership rewards come from pure `membership-rules.ts` with stable reward_key (unique per customer). Why: idempotent issuing.
 - Invite-code shortcut is isolated in `src/lib/invite.server.ts`. Why: removable later.
 - Tests: `bunx vitest run --config vitest.config.ts`.
 - Service amounts remain numeric with `price_from`; formatting is centralized in `servicePrice`. Why: consistent fixed/starting prices everywhere.

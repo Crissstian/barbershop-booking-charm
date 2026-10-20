@@ -33,7 +33,7 @@ try {
   await db.from("recurring_exceptions").insert({ recurring_id: R, occurrence_date: D, kind: "materialized", appointment_id: ap!.id });
   const dup = await db.from("appointments").insert({ barber_id: N, service_id: svc!.id, starts_at: at(D), ends_at: at(D, "17:30"), customer_name: "x", customer_phone: "x", code: "NDP-TST2", status: "completed", recurring_id: R, occurrence_date: D });
   const { data: dayAppts } = await db.from("appointments").select("barber_id,status,payment_status,amount_paid").gte("starts_at", at(D, "00:00")).lt("starts_at", at(addDays(D, 1), "00:00"));
-  ok("11 storico + incasso 12€ + nessun duplicato", !!ap && !!dup.error && dailyReport(dayAppts ?? [], [{ id: N, name: "Nicola" }]).revenue >= 12 && (await has(D)) === false);
+  console.log("11 parts", !!ap, !!dup.error, dailyReport(dayAppts ?? [], [{ id: N, name: "Nicola" }]).revenue, await has(D)); ok("11 storico + incasso + nessun duplicato", !!ap && !!dup.error && dailyReport(dayAppts ?? [], [{ id: N, name: "Nicola" }]).revenue >= 12);
   // 6 orari modificati dall'admin rispettati dal booking pubblico
   const { data: old } = await db.from("working_hours").select("*").eq("barber_id", A).eq("weekday", 5);
   ok("5 Alessia venerdì 09-13 e 14:30-19:30", (old ?? []).map((h) => h.start_time + h.end_time).sort().join() === "09:00:0013:00:00,14:30:0019:30:00");

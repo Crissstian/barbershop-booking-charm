@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { availableStarts, withinWorkingWindow } from "./booking-rules";
+import { occurrencesBetween, type RecurringRule } from "./recurring-rules";
 
 const TZ = "Europe/Rome";
 
@@ -47,22 +48,37 @@ export async function canPerform(barberId: string, serviceId: string) {
 }
 
 type Busy = { barber_id: string; s: number; e: number };
+export type SkipOccurrence = { recurringId: string; date: string };
 
-async function loadData(fromDate: string, toDate: string, excludeId?: string) {
+/** Occorrenze dei clienti fissi come intervalli occupati (regole attive meno eccezioni). */
+export async function recurringBusy(fromDate: string, toDate: string, opts: { skip?: SkipOccurrence | undefined; excludeRuleId?: string | undefined } = {}) {
+  const [rules, exc] = await Promise.all([
+    supabaseAdmin.from("recurring_appointments").select("id,barber_id,service_id,weekday,start_time,interval_weeks,start_date,end_date,active,services(duration_min)").eq("active", true).lte("start_date", toDate),
+    supabaseAdmin.from("recurring_exceptions").select("recurring_id,occurrence_date").gte("occurrence_date", fromDate).lte("occurrence_date", toDate),
+  ]);
+  const list = (rules.data ?? []).filter((r) => r.id !== opts.excludeRuleId);
+  const dur = new Map(list.map((r) => [r.id, r.services?.duration_min ?? 30]));
+  return occurrencesBetween(list as RecurringRule[], exc.data ?? [], fromDate, toDate)
+    .filter((o) => !(opts.skip && o.recurringId === opts.skip.recurringId && o.date === opts.skip.date))
+    .map((o) => { const s = romeToUtc(o.date, o.time); return { barber_id: o.barber_id, s, e: s + (dur.get(o.recurringId) ?? 30) * 60000, recurringId: o.recurringId, date: o.date }; });
+}
+
+async function loadData(fromDate: string, toDate: string, excludeId?: string, skip?: SkipOccurrence) {
   const from = new Date(romeToUtc(fromDate, "00:00")).toISOString();
   const to = new Date(romeToUtc(addDays(toDate, 1), "00:00")).toISOString();
   let apptQ = supabaseAdmin.from("appointments").select("id,barber_id,starts_at,ends_at").eq("status", "confirmed").lt("starts_at", to).gt("ends_at", from);
   if (excludeId) apptQ = apptQ.neq("id", excludeId);
-  const [barbers, hours, appts, blocks, links] = await Promise.all([
+  const [barbers, hours, appts, blocks, links, fixed] = await Promise.all([
     supabaseAdmin.from("barbers").select("id,name,sort").eq("active", true).order("sort"),
     supabaseAdmin.from("working_hours").select("*"),
     apptQ,
     supabaseAdmin.from("blocked_slots").select("barber_id,starts_at,ends_at").lt("starts_at", to).gt("ends_at", from),
     supabaseAdmin.from("barber_services").select("barber_id,service_id,services!inner(duration_min,active)").eq("services.active", true),
+    recurringBusy(fromDate, toDate, { skip }),
   ]);
   const busy: Busy[] = [...(appts.data ?? []), ...(blocks.data ?? [])].map((b) => ({
     barber_id: b.barber_id, s: Date.parse(b.starts_at), e: Date.parse(b.ends_at),
-  }));
+  })).concat(fixed);
   return { barbers: barbers.data ?? [], hours: hours.data ?? [], busy, links: links.data ?? [] };
 }
 
@@ -116,15 +132,18 @@ export async function isFree(barberId: string, startMs: number, dur: number) {
 }
 
 /** Controllo staff: nessuna sovrapposizione con appuntamenti confermati o orari bloccati. */
-export async function hasConflict(barberId: string, startMs: number, endMs: number, excludeId?: string) {
+export async function hasConflict(barberId: string, startMs: number, endMs: number, excludeId?: string, skip?: SkipOccurrence, excludeRuleId?: string) {
   const s = new Date(startMs).toISOString();
   const e = new Date(endMs).toISOString();
   let q = supabaseAdmin.from("appointments").select("id", { count: "exact", head: true })
     .eq("barber_id", barberId).eq("status", "confirmed").lt("starts_at", e).gt("ends_at", s);
   if (excludeId) q = q.neq("id", excludeId);
-  const [a, b] = await Promise.all([
+  const day = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(ms));
+  const [a, b, fixed] = await Promise.all([
     q,
     supabaseAdmin.from("blocked_slots").select("id", { count: "exact", head: true }).eq("barber_id", barberId).lt("starts_at", e).gt("ends_at", s),
+    recurringBusy(day(startMs), day(endMs), { skip, excludeRuleId }),
   ]);
-  return (a.count ?? 0) > 0 || (b.count ?? 0) > 0;
+  const fixedHit = fixed.some((f) => f.barber_id === barberId && f.s < endMs && f.e > startMs);
+  return (a.count ?? 0) > 0 || (b.count ?? 0) > 0 || fixedHit;
 }

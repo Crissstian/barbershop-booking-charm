@@ -8,14 +8,8 @@ import { SplitText } from "@/components/split-text";
 import { Tilt } from "@/components/tilt-card";
 import { SALON, waLink } from "@/lib/salon";
 
-import nicolaPortrait from "@/assets/barber-nicola.jpg";
-import danielePortrait from "@/assets/barber-daniele.jpg";
-import antonioPortrait from "@/assets/barber-antonio.jpg";
+import { portraitFor } from "@/lib/portraits";
 import salonHero from "@/assets/salon-hero-light.jpg";
-
-/** Ritratti locali per slug: indipendenti dall'ordinamento. photo_url dal database ha la precedenza. */
-const PORTRAITS: Record<string, string> = { nicola: nicolaPortrait, antonio: antonioPortrait, daniele: danielePortrait };
-const portraitFor = (b: { slug: string | null; photo_url: string | null }) => b.photo_url || (b.slug ? PORTRAITS[b.slug] : undefined);
 
 export const catalogQuery = queryOptions({ queryKey: ["catalog"], queryFn: () => getCatalog(), staleTime: 30_000 });
 
@@ -38,11 +32,6 @@ function Home() {
   const { data } = useSuspenseQuery(catalogQuery);
   const next = [...data.next].filter((n) => n.start).sort((a, b) => a.start!.localeCompare(b.start!))[0];
   const nextBarber = data.barbers.find((b) => b.id === next?.barberId);
-  const products = [
-    { number: "01", name: "Cera Opaca", type: "Styling", note: "Tenuta decisa, finish naturale", shape: "product-jar" },
-    { number: "02", name: "Olio Nutriente", type: "Beard ritual", note: "Legno di sandalo e cedro", shape: "product-bottle" },
-    { number: "03", name: "Shampoo Daily", type: "Hair care", note: "Detersione delicata quotidiana", shape: "product-tube" },
-  ];
 
   return (
     <main className="overflow-hidden bg-background pb-28 text-foreground">
@@ -143,24 +132,20 @@ function Home() {
           </div>
         </ScrollReveal>
         <div className="product-track mx-auto mt-16 flex max-w-6xl snap-x snap-mandatory gap-5 overflow-x-auto pb-6">
-          {products.map((product) => (
-            <ScrollReveal key={product.number} className="min-w-[82%] snap-center sm:min-w-[48%] lg:min-w-[31%]">
-              <Tilt intensity={9}>
-              <article className="product-card group border border-border bg-card p-5">
-                <div className="product-stage relative flex aspect-[4/5] items-center justify-center overflow-hidden border border-border">
-                  <span className="absolute left-4 top-4 font-serif text-4xl text-border">{product.number}</span>
-                  <div className={`${product.shape} product-shape relative transition-transform duration-700 group-hover:-translate-y-3`}>
-                    <span>NDP</span>
-                  </div>
-                  <div className="product-shadow absolute bottom-[14%] h-5 w-28 rounded-full" />
+          {data.products.map((product, i) => (
+            <ScrollReveal key={product.id} className="min-w-[78%] snap-center sm:min-w-[46%] lg:min-w-[31%]">
+              <Tilt intensity={7}>
+              <article className="product-card group border border-border bg-card p-4">
+                <div className="product-stage relative aspect-[4/5] overflow-hidden border border-border">
+                  {product.image_url && <img src={product.image_url} alt={`${product.brand} ${product.name}`} loading="lazy" className="product-photo absolute inset-0 h-full w-full object-cover" />}
+                  <span className="absolute left-4 top-4 z-10 font-serif text-3xl text-foreground/30">{String(i + 1).padStart(2, "0")}</span>
                 </div>
-                <p className="mt-6 text-[9px] uppercase tracking-[0.22em] text-champagne">{product.type}</p>
+                <p className="mt-6 text-[9px] uppercase tracking-[0.22em] text-champagne">{product.brand}</p>
                 <h3 className="mt-2 font-serif text-3xl">{product.name}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{product.note}</p>
+                {product.description && <p className="mt-2 text-sm text-muted-foreground">{product.description}</p>}
                 <p className="mt-6 border-t border-border pt-4 text-[10px] uppercase tracking-[0.2em]">Disponibile in salone</p>
               </article>
               </Tilt>
-
             </ScrollReveal>
           ))}
         </div>

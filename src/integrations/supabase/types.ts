@@ -27,7 +27,9 @@ export type Database = {
           ends_at: string
           id: string
           notes: string | null
+          occurrence_date: string | null
           payment_status: string
+          recurring_id: string | null
           reminder_sent_at: string | null
           service_id: string
           staff_notes: string | null
@@ -48,7 +50,9 @@ export type Database = {
           ends_at: string
           id?: string
           notes?: string | null
+          occurrence_date?: string | null
           payment_status?: string
+          recurring_id?: string | null
           reminder_sent_at?: string | null
           service_id: string
           staff_notes?: string | null
@@ -69,7 +73,9 @@ export type Database = {
           ends_at?: string
           id?: string
           notes?: string | null
+          occurrence_date?: string | null
           payment_status?: string
+          recurring_id?: string | null
           reminder_sent_at?: string | null
           service_id?: string
           staff_notes?: string | null
@@ -91,6 +97,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_appointments"
             referencedColumns: ["id"]
           },
           {
@@ -256,6 +269,53 @@ export type Database = {
           },
         ]
       }
+      customer_rewards: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          issued_at: string
+          redeemed_at: string | null
+          reward_key: string
+          reward_type: string
+          status: string
+          threshold: number | null
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          issued_at?: string
+          redeemed_at?: string | null
+          reward_key: string
+          reward_type: string
+          status?: string
+          threshold?: number | null
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          issued_at?: string
+          redeemed_at?: string | null
+          reward_key?: string
+          reward_type?: string
+          status?: string
+          threshold?: number | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_rewards_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           active: boolean
@@ -295,10 +355,159 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          active: boolean
+          brand: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          sort: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          sort?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          sort?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recurring_appointments: {
+        Row: {
+          active: boolean
+          barber_id: string
+          created_at: string
+          customer_id: string
+          end_date: string | null
+          id: string
+          interval_weeks: number
+          notes: string | null
+          service_id: string
+          start_date: string
+          start_time: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          barber_id: string
+          created_at?: string
+          customer_id: string
+          end_date?: string | null
+          id?: string
+          interval_weeks?: number
+          notes?: string | null
+          service_id: string
+          start_date: string
+          start_time: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          barber_id?: string
+          created_at?: string
+          customer_id?: string
+          end_date?: string | null
+          id?: string
+          interval_weeks?: number
+          notes?: string | null
+          service_id?: string
+          start_date?: string
+          start_time?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_appointments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_exceptions: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          occurrence_date: string
+          recurring_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          occurrence_date: string
+          recurring_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          occurrence_date?: string
+          recurring_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_exceptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_exceptions_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           active: boolean
           category: string
+          counts_as_haircut: boolean
           description: string | null
           duration_min: number
           id: string
@@ -310,6 +519,7 @@ export type Database = {
         Insert: {
           active?: boolean
           category?: string
+          counts_as_haircut?: boolean
           description?: string | null
           duration_min: number
           id?: string
@@ -321,6 +531,7 @@ export type Database = {
         Update: {
           active?: boolean
           category?: string
+          counts_as_haircut?: boolean
           description?: string | null
           duration_min?: number
           id?: string

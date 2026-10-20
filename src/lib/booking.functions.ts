@@ -48,7 +48,7 @@ export const requestCustomerApproval = createServerFn({ method: "POST" })
       first_name: data.firstName,
       last_name: data.lastName,
       phone: data.phone ?? null,
-      invited_with: invited ? data.inviteCode!.toUpperCase() : null,
+      invited_with: invited ? data.inviteCode?.toUpperCase() ?? null : null,
       status,
       reviewed_at: invited ? new Date().toISOString() : null,
       ...(customerId ? { customer_id: customerId } : {}),
@@ -122,7 +122,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
   const { getNextSlots } = await import("./booking.server");
   const [b, s, l] = await Promise.all([
     supabaseAdmin.from("barbers").select("id,name,role_title,bio,sort,slug,photo_url").eq("active", true).order("sort"),
-    supabaseAdmin.from("services").select("id,name,description,duration_min,price,sort").eq("active", true).order("sort"),
+    supabaseAdmin.from("services").select("id,name,description,category,duration_min,price,price_from,sort").eq("active", true).order("sort"),
     supabaseAdmin.from("barber_services").select("barber_id,service_id"),
   ]);
   const next = await getNextSlots(45);
@@ -134,7 +134,7 @@ export const getSlots = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { getDaySlots } = await import("./booking.server");
-    const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", data.serviceId).single();
+    const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", data.serviceId).eq("active", true).single();
     if (!svc) return [];
     return getDaySlots(data.barberId, data.date, svc.duration_min, data.serviceId);
   });
@@ -159,7 +159,7 @@ export const createBooking = createServerFn({ method: "POST" })
       .maybeSingle();
     if (approval?.status !== "approved") throw new Error("Questa email non è ancora autorizzata a prenotare.");
     if (!(await canPerform(data.barberId, data.serviceId))) throw new Error("Questo professionista non esegue il servizio scelto.");
-    const { data: svc } = await supabaseAdmin.from("services").select("name,duration_min").eq("id", data.serviceId).single();
+    const { data: svc } = await supabaseAdmin.from("services").select("name,duration_min").eq("id", data.serviceId).eq("active", true).single();
     if (!svc) throw new Error("Servizio non trovato");
     const startMs = Date.parse(data.start);
     if (!(await isFree(data.barberId, startMs, svc.duration_min))) throw new Error("Questo orario non è più disponibile. Scegline un altro.");
@@ -206,7 +206,7 @@ export const getBooking = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin.from("appointments")
-      .select("code,starts_at,ends_at,status,customer_name,whatsapp_sent_at,barbers(name),services(name,price,duration_min)")
+      .select("code,starts_at,ends_at,status,customer_name,whatsapp_sent_at,barbers(name),services(name,price,price_from,duration_min)")
       .eq("token", data.token).maybeSingle();
     return row;
   });

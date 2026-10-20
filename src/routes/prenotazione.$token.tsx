@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelBooking, getBooking } from "@/lib/booking.functions";
-import { euro, fmtDay, fmtTime } from "@/lib/format";
+import { servicePrice, fmtDay, fmtTime } from "@/lib/format";
 import { downloadIcs, googleCalendarUrl } from "@/lib/calendar";
 import { SALON, waLink } from "@/lib/salon";
 
@@ -28,7 +28,7 @@ function Page() {
   const { data } = useSuspenseQuery(q(token));
   const qc = useQueryClient();
   if (!data) return <main className="p-10 text-center font-serif text-2xl">Prenotazione non trovata.</main>;
-  const b = data as unknown as { code: string; starts_at: string; ends_at: string; status: string; customer_name: string; whatsapp_sent_at: string | null; barbers: { name: string }; services: { name: string; price: number; duration_min: number } };
+  const b = data as unknown as { code: string; starts_at: string; ends_at: string; status: string; customer_name: string; whatsapp_sent_at: string | null; barbers: { name: string }; services: { name: string; price: number; price_from: boolean; duration_min: number } };
   const cancelled = b.status === "cancelled";
   const future = Date.parse(b.starts_at) > Date.now();
   const event = {
@@ -51,7 +51,7 @@ function Page() {
         <p className="font-serif text-3xl tracking-widest">{b.code}</p>
         <p className="mt-4 font-serif text-2xl">{b.services.name} con {b.barbers.name}</p>
         <p className="capitalize">{fmtDay(b.starts_at)} · ore {fmtTime(b.starts_at)}</p>
-        <p className="text-sm text-muted-foreground">{b.services.duration_min} min · {euro(Number(b.services.price))}</p>
+        <p className="text-sm text-muted-foreground">{b.services.duration_min} min · {servicePrice(b.services)}</p>
         <span className="progress-gold mt-5 block h-px w-full" />
       </div>
 

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { checkCustomerApproval, createBooking, getSlots, joinWaitlist, requestCustomerApproval } from "@/lib/booking.functions";
 import { catalogQuery } from "./index";
-import { addDays, euro, fmtDay, fmtTime, romeDate } from "@/lib/format";
+import { addDays, servicePrice, fmtDay, fmtTime, romeDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { barbersForService } from "@/lib/report";
 import { waLink } from "@/lib/salon";
@@ -170,8 +170,8 @@ function Booking() {
               if (!ok) setBarber("");
               setService(s.id); setSlot(null); setStep(barberId && ok ? 2 : 1);
             }}>
-              <span className="flex justify-between font-serif text-2xl"><span>{s.name}</span><span>{euro(Number(s.price))}</span></span>
-              <span className="text-sm text-muted-foreground">{s.description} · {s.duration_min} min</span>
+              <span className="flex justify-between gap-3 font-serif text-2xl"><span>{s.name}</span><span className="shrink-0 whitespace-nowrap">{servicePrice(s)}</span></span>
+              <span className="text-sm capitalize text-muted-foreground">{s.category} · {s.description ? `${s.description} · ` : ""}{s.duration_min} min</span>
             </button>
           ))}
         </section>
@@ -251,7 +251,7 @@ function Booking() {
           <div className="border-l-2 border-accent bg-secondary p-4 text-sm">
             <p className="font-serif text-xl">{service.name} con {barberName(slot.barberId)}</p>
             <p className="capitalize">{fmtDay(slot.start)} · ore {fmtTime(slot.start)}</p>
-            <p className="text-muted-foreground">{service.duration_min} min · {euro(Number(service.price))} (si paga in salone)</p>
+            <p className="text-muted-foreground">{service.duration_min} min · {servicePrice(service)} (si paga in salone)</p>
           </div>
            {([["phone", "Telefono", "tel", true], ["email", "Email autorizzata", "email", true]] as const).map(([k, l, t, req]) => (
             <label key={k} className="block text-sm">

@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { availableStarts, withinWorkingWindow } from "./booking-rules";
 
 const TZ = "Europe/Rome";
-const STEP = 15;
 
 function tzOffset(ts: number) {
   const p = Object.fromEntries(
@@ -10,7 +10,7 @@ function tzOffset(ts: number) {
       hour: "2-digit", minute: "2-digit", second: "2-digit",
     }).formatToParts(new Date(ts)).map((x) => [x.type, x.value]),
   );
-  const asUtc = Date.UTC(+p['year']!, +p['month']! - 1, +p['day']!, +p['hour']!, +p['minute']!, +p['second']!);
+  const asUtc = Date.UTC(Number(p['year']), Number(p['month']) - 1, Number(p['day']), Number(p['hour']), Number(p['minute']), Number(p['second']));
   return asUtc - Math.floor(ts / 1000) * 1000;
 }
 
@@ -58,7 +58,7 @@ async function loadData(fromDate: string, toDate: string, excludeId?: string) {
     supabaseAdmin.from("working_hours").select("*"),
     apptQ,
     supabaseAdmin.from("blocked_slots").select("barber_id,starts_at,ends_at").lt("starts_at", to).gt("ends_at", from),
-    supabaseAdmin.from("barber_services").select("barber_id,service_id,services(duration_min)"),
+    supabaseAdmin.from("barber_services").select("barber_id,service_id,services!inner(duration_min,active)").eq("services.active", true),
   ]);
   const busy: Busy[] = [...(appts.data ?? []), ...(blocks.data ?? [])].map((b) => ({
     barber_id: b.barber_id, s: Date.parse(b.starts_at), e: Date.parse(b.ends_at),
@@ -68,22 +68,18 @@ async function loadData(fromDate: string, toDate: string, excludeId?: string) {
 
 type Data = Awaited<ReturnType<typeof loadData>>;
 
-function barberSlots(data: Data, barberId: string, date: string, dur: number) {
+function workingWindows(data: Pick<Data, "hours">, barberId: string, date: string) {
   const [y, m, d] = date.split("-").map(Number) as [number, number, number];
   const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  const minStart = Date.now() + 30 * 60000;
-  const out: number[] = [];
-  for (const h of data.hours.filter((h) => h.barber_id === barberId && h.weekday === wd)) {
-    const s = romeToUtc(date, h.start_time.slice(0, 5));
-    const e = romeToUtc(date, h.end_time.slice(0, 5));
-    for (let t = s; t + dur * 60000 <= e; t += STEP * 60000) {
-      const te = t + dur * 60000;
-      if (t < minStart) continue;
-      if (data.busy.some((b) => b.barber_id === barberId && b.s < te && b.e > t)) continue;
-      out.push(t);
-    }
-  }
-  return out;
+  return data.hours.filter((h) => h.barber_id === barberId && h.weekday === wd).map((h) => ({ start: romeToUtc(date, h.start_time.slice(0, 5)), end: romeToUtc(date, h.end_time.slice(0, 5)) }));
+}
+function barberSlots(data: Data, barberId: string, date: string, dur: number) {
+  return availableStarts(workingWindows(data, barberId, date), data.busy.filter((b) => b.barber_id === barberId).map((b) => ({ start: b.s, end: b.e })), dur, Date.now() + 30 * 60000);
+}
+export async function isWithinWorkingHours(barberId: string, date: string, time: string, dur: number) {
+  const { data, error } = await supabaseAdmin.from("working_hours").select("*").eq("barber_id", barberId);
+  if (error) throw new Error("Impossibile verificare gli orari di lavoro");
+  return withinWorkingWindow(romeToUtc(date, time), dur, workingWindows({ hours: data ?? [] }, barberId, date));
 }
 
 /** Slot del giorno; con "any" cerca solo tra i professionisti abilitati al servizio. */
@@ -106,7 +102,8 @@ export async function getNextSlots(fallbackDur: number) {
     const dur = durs.length ? Math.min(...durs) : fallbackDur;
     for (let i = 0; i <= 21; i++) {
       const s = barberSlots(data, b.id, addDays(from, i), dur);
-      if (s.length) return { barberId: b.id, start: new Date(s[0]!).toISOString() };
+      const first = s[0];
+      if (first !== undefined) return { barberId: b.id, start: new Date(first).toISOString() };
     }
     return { barberId: b.id, start: null as string | null };
   });

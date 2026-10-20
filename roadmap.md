@@ -1,5 +1,12 @@
 # NDP — Esclusive Hair Saloon
 
+## Rifinitura e configurazione ufficiale
+- [x] Sicurezza primo admin e chiusura signup pubblico
+- [x] Listino ufficiale, prezzi da e gestione servizi admin
+- [x] Slot 10 minuti, abilitazioni e conferma fuori orario
+- [x] Test pubblici, automatici e istruzioni primo accesso
+- [ ] Test C–E, L, N da account staff reale (bloccato: Nicola deve creare il primo account; non creare credenziali fittizie)
+
 ## Task list
 - [x] Database + seed (Nicola, Daniele, Antonio, servizi, orari Mar–Sab)
 - [x] Design system + logo + favicon

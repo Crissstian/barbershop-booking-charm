@@ -3,9 +3,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { addDays, euro, fmtTime, romeDate } from "@/lib/format";
+import { addDays, euro, servicePrice, fmtTime, romeDate } from "@/lib/format";
 import { reviewCustomerApproval } from "@/lib/booking.functions";
-import { cancelAdminBooking, completeAdminBooking, createAdminBooking, saveAdminCustomer, updateAdminBooking } from "@/lib/admin.functions";
+import { cancelAdminBooking, completeAdminBooking, createAdminBooking, saveAdminCustomer, updateAdminBooking, checkAdminWorkingHours, getStaffBootstrap } from "@/lib/admin.functions";
+import { ServiceManager, type ManagedService } from "@/components/service-manager";
+import { Button } from "@/components/ui/button";
+import { OUTSIDE_HOURS_MESSAGE } from "@/lib/booking-rules";
 import { barbersForService, dailyReport } from "@/lib/report";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { waLink } from "@/lib/salon";
@@ -42,13 +45,16 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signup, setSignup] = useState(false);
+  const [signupOpen, setSignupOpen] = useState(false);
+  useEffect(() => { getStaffBootstrap().then((r) => setSignupOpen(r.signupOpen)).catch(() => setSignupOpen(false)); }, []);
   async function go(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = signup
+    if (signup && !(await getStaffBootstrap()).signupOpen) { setSignupOpen(false); setSignup(false); toast.error("La registrazione staff è chiusa"); return; }
+    const { error, data } = signup
       ? await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/admin` } })
       : await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error(error.message);
-    else if (signup) toast.success("Controlla la tua email per confermare l'account");
+    else if (signup) toast.success(data.session ? "Account staff creato" : "Controlla la tua email per confermare l'account");
   }
   const input = "mt-1 w-full border bg-card px-3 py-3 outline-none focus:border-foreground";
   return (
@@ -58,11 +64,11 @@ function Login() {
       <form onSubmit={go} className="mt-6 space-y-4">
         <label className="block text-sm">Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={input} /></label>
         <label className="block text-sm">Password<input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className={input} /></label>
-        <button className="w-full bg-primary py-3 text-sm uppercase tracking-widest text-primary-foreground">{signup ? "Crea account" : "Accedi"}</button>
+        <Button className="h-auto w-full py-3 text-sm uppercase tracking-widest">{signup ? "Crea account" : "Accedi"}</Button>
       </form>
-      <button onClick={() => setSignup(!signup)} className="mt-4 text-sm text-muted-foreground underline">
+      {signupOpen && <Button variant="link" onClick={() => setSignup(!signup)} className="mt-4 text-sm text-muted-foreground underline">
         {signup ? "Ho già un account" : "Primo accesso? Crea account"}
-      </button>
+      </Button>}
     </main>
   );
 }
@@ -70,12 +76,12 @@ function Login() {
 type Appt = {
   id: string; starts_at: string; ends_at: string; status: string; customer_name: string; customer_phone: string; customer_email: string | null;
   customer_id: string | null; notes: string | null; staff_notes: string | null; whatsapp_sent_at: string | null; code: string;
-  barber_id: string; service_id: string; payment_status: string; amount_paid: number | null; services: { name: string; price: number } | null;
+  barber_id: string; service_id: string; payment_status: string; amount_paid: number | null; services: { name: string; price: number; price_from: boolean } | null;
 };
 type Approval = { id: string; first_name: string; last_name: string; email: string; phone: string | null; status: string; created_at: string };
 type Wait = { id: string; email: string; phone: string | null; day: string; created_at: string };
 type Barber = { id: string; name: string; active: boolean };
-type Service = { id: string; name: string; price: number; duration_min: number };
+type Service = ManagedService;
 type Customer = { id: string; first_name: string; last_name: string; phone: string; email: string | null };
 type Link = { barber_id: string; service_id: string };
 
@@ -99,9 +105,9 @@ function Dashboard({ userId }: { userId: string }) {
     const from = new Date(`${date}T00:00:00`).toISOString();
     const to = new Date(`${addDays(date, 1)}T00:00:00`).toISOString();
     const [a, b, s, c, w, l, cu] = await Promise.all([
-      supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,customer_email,customer_id,notes,staff_notes,whatsapp_sent_at,code,barber_id,service_id,payment_status,amount_paid,services(name,price)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
+      supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,customer_email,customer_id,notes,staff_notes,whatsapp_sent_at,code,barber_id,service_id,payment_status,amount_paid,services(name,price,price_from)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
       supabase.from("barbers").select("id,name,active").order("sort"),
-      supabase.from("services").select("id,name,price,duration_min").order("sort"),
+      supabase.from("services").select("id,name,category,price,price_from,duration_min,sort,active").order("sort"),
       supabase.from("customer_approvals").select("id,first_name,last_name,email,phone,status,created_at").order("created_at", { ascending: false }),
       supabase.from("waitlist").select("id,email,phone,day,created_at").is("notified_at", null).order("created_at", { ascending: false }),
       supabase.from("barber_services").select("barber_id,service_id"),
@@ -109,7 +115,7 @@ function Dashboard({ userId }: { userId: string }) {
     ]);
     setAppts((a.data as Appt[]) ?? []);
     setBarbers(b.data ?? []);
-    setServices(s.data ?? []);
+    setServices((s.data as Service[]) ?? []);
     setApprovals((c.data as Approval[]) ?? []);
     setWaitlist((w.data as Wait[]) ?? []);
     setLinks(l.data ?? []);
@@ -141,10 +147,6 @@ function Dashboard({ userId }: { userId: string }) {
       starts_at: new Date(`${date}T${block.from}:00`).toISOString(), ends_at: new Date(`${date}T${block.to}:00`).toISOString(),
     });
     if (error) toast.error(error.message); else toast.success("Orario bloccato");
-  }
-  async function savePrice(id: string, price: number) {
-    await supabase.from("services").update({ price }).eq("id", id);
-    toast.success("Prezzo aggiornato");
   }
   async function reviewCustomer(id: string, status: "approved" | "rejected") {
     try {
@@ -272,18 +274,8 @@ function Dashboard({ userId }: { userId: string }) {
           <input placeholder="Motivo (facoltativo)" value={block.reason} onChange={(e) => setBlock({ ...block, reason: e.target.value })} className="w-full border bg-card px-3 py-2" />
           <button className="w-full bg-primary py-2 text-sm uppercase tracking-widest text-primary-foreground">Blocca</button>
         </form>
-        <section className="border p-4">
-          <h2 className="font-serif text-2xl">Listino</h2>
-          <ul className="mt-3 space-y-2">
-            {services.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-2 text-sm">
-                <span>{s.name} · {s.duration_min} min <span className="text-muted-foreground">({euro(Number(s.price))})</span></span>
-                <input type="number" step="0.5" defaultValue={Number(s.price)} onBlur={(e) => savePrice(s.id, Number(e.target.value))} className="w-20 border bg-card px-2 py-1" />
-              </li>
-            ))}
-          </ul>
-        </section>
       </div>
+      <ServiceManager services={services} onChange={load} />
 
       <Sheet open={!!sheet} onOpenChange={(o) => !o && setSheet(null)}>
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
@@ -294,7 +286,7 @@ function Dashboard({ userId }: { userId: string }) {
               appt={sheet.mode === "edit" ? sheet.appt : undefined}
               date={date}
               barbers={activeBarbers}
-              services={services}
+              services={services.filter((s) => s.active || (sheet.mode === "edit" && s.id === sheet.appt.service_id))}
               links={links}
               customers={customers}
               onDone={() => { setSheet(null); load(); }}
@@ -337,7 +329,7 @@ function ApptCard({ a, onOpen, onChange }: { a: Appt; onOpen: () => void; onChan
       </div>
       {closing && a.status === "confirmed" && (
         <div className="mt-2 space-y-2 border-t border-border pt-2">
-          <label className="block text-xs">Importo ricevuto (listino {euro(Number(a.services?.price ?? 0))})
+          <label className="block text-xs">Importo ricevuto (listino {a.services ? servicePrice(a.services) : euro(0)})
             <input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${field} mt-1`} />
           </label>
           <div className="flex gap-2">
@@ -368,6 +360,19 @@ function AppointmentForm({ appt, date, barbers, services, links, customers, onDo
   });
   const [busy, setBusy] = useState(false);
   const eligible = barbersForService(barbers, links, f.serviceId);
+  const [hoursCheck, setHoursCheck] = useState<{ key: string; inside: boolean } | null>(null);
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
+  const windowKey = `${f.barberId}/${f.serviceId}/${f.date}/${f.time}`;
+  const checked = hoursCheck?.key === windowKey;
+  const outside = checked && hoursCheck?.inside === false;
+  const confirmException = confirmedKey === windowKey;
+  useEffect(() => {
+    let current = true;
+    if (f.barberId && f.serviceId) checkAdminWorkingHours({ data: { barberId: f.barberId, serviceId: f.serviceId, date: f.date, time: f.time } })
+      .then((r) => { if (current) setHoursCheck({ key: windowKey, inside: r.inside }); })
+      .catch(() => { if (current) setHoursCheck(null); });
+    return () => { current = false; };
+  }, [windowKey]);
   const barberOk = eligible.some((b) => b.id === f.barberId);
   const selected = customers.find((c) => c.id === customerId);
   const q = query.trim().toLowerCase();
@@ -377,12 +382,13 @@ function AppointmentForm({ appt, date, barbers, services, links, customers, onDo
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!barberOk) { toast.error("Scegli un professionista abilitato al servizio"); return; }
+    if (!checked || (outside && !confirmException)) { toast.error(OUTSIDE_HOURS_MESSAGE + " Conferma eccezione."); return; }
     setBusy(true);
     try {
       let id = customerId;
       if (creating) id = (await saveAdminCustomer({ data: nc })).id;
       if (!id) throw new Error("Seleziona o crea un cliente");
-      const payload = { customerId: id, barberId: f.barberId, serviceId: f.serviceId, date: f.date, time: f.time, notes: f.notes || undefined, staffNotes: f.staffNotes || undefined };
+      const payload = { customerId: id, barberId: f.barberId, serviceId: f.serviceId, date: f.date, time: f.time, notes: f.notes || undefined, staffNotes: f.staffNotes || undefined, confirmException };
       if (appt) await updateAdminBooking({ data: { id: appt.id, ...payload } });
       else await createAdminBooking({ data: payload });
       toast.success(appt ? "Modifiche salvate" : "Appuntamento creato");
@@ -430,7 +436,7 @@ function AppointmentForm({ appt, date, barbers, services, links, customers, onDo
 
       <label className="block text-sm">Servizio
         <select value={f.serviceId} onChange={(e) => setF({ ...f, serviceId: e.target.value })} className={`${field} mt-1`}>
-          {services.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.duration_min} min · {euro(Number(s.price))}</option>)}
+          {services.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.duration_min} min · {servicePrice(s)}</option>)}
         </select>
       </label>
       <label className="block text-sm">Professionista
@@ -444,10 +450,11 @@ function AppointmentForm({ appt, date, barbers, services, links, customers, onDo
         <label className="block text-sm">Ora<input type="time" step={300} required value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} className={`${field} mt-1`} /></label>
       </div>
       {svc && <p className="text-xs text-muted-foreground">Durata {svc.duration_min} min: la fine viene ricalcolata automaticamente.</p>}
+      {outside && <div role="alert" className="border-l-2 border-accent bg-secondary p-4 text-sm"><p>{OUTSIDE_HOURS_MESSAGE}</p><label className="mt-3 flex items-center gap-2"><input type="checkbox" checked={confirmException} onChange={(e) => setConfirmedKey(e.target.checked ? windowKey : null)} />Conferma eccezione</label></div>}
       {appt && <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Stato: {appt.status === "confirmed" ? "Confermato" : appt.status === "completed" ? "Completato" : "Annullato"}</p>}
       <label className="block text-sm">Note cliente<textarea rows={2} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} className={`${field} mt-1`} /></label>
       <label className="block text-sm">Note staff (riservate)<textarea rows={2} value={f.staffNotes} onChange={(e) => setF({ ...f, staffNotes: e.target.value })} className={`${field} mt-1`} /></label>
-      <button disabled={busy} className="w-full bg-primary py-3 text-xs uppercase tracking-[0.25em] text-primary-foreground disabled:opacity-50">{busy ? "Attendi…" : appt ? "Salva modifiche" : "Crea appuntamento"}</button>
+      <Button disabled={busy || !checked || (outside && !confirmException)} className="h-auto w-full py-3 text-xs uppercase tracking-[0.25em]">{busy ? "Attendi…" : appt ? "Salva modifiche" : "Crea appuntamento"}</Button>
       {appt && appt.status === "confirmed" && <button type="button" disabled={busy} onClick={cancel} className="w-full border border-destructive py-3 text-xs uppercase tracking-[0.25em] text-destructive">Annulla appuntamento</button>}
     </form>
   );

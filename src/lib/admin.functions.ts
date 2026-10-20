@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { serviceSchema } from "./service-rules";
+import { requireWorkingHoursConfirmation } from "./booking-rules";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
@@ -26,15 +28,17 @@ const bookingFields = {
   time: z.string().regex(/^\d{2}:\d{2}$/),
   notes: z.string().trim().max(300).optional(),
   staffNotes: z.string().trim().max(500).optional(),
+  confirmException: z.boolean().default(false),
 };
 
 /** Verifica servizio, compatibilità e sovrapposizioni; restituisce la finestra calcolata. */
-async function validateWindow(barberId: string, serviceId: string, date: string, time: string, excludeId?: string) {
+async function validateWindow(barberId: string, serviceId: string, date: string, time: string, confirmException: boolean, excludeId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { canPerform, hasConflict, romeToUtc, OVERLAP_MESSAGE } = await import("./booking.server");
-  const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", serviceId).maybeSingle();
+  const { canPerform, hasConflict, romeToUtc, isWithinWorkingHours, OVERLAP_MESSAGE } = await import("./booking.server");
+  const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", serviceId).eq("active", true).maybeSingle();
   if (!svc) throw new Error("Servizio non trovato");
   if (!(await canPerform(barberId, serviceId))) throw new Error("Questo professionista non esegue il servizio scelto.");
+  requireWorkingHoursConfirmation(await isWithinWorkingHours(barberId, date, time, svc.duration_min), confirmException);
   const startMs = romeToUtc(date, time);
   const endMs = startMs + svc.duration_min * 60000;
   if (await hasConflict(barberId, startMs, endMs, excludeId)) throw new Error(OVERLAP_MESSAGE);
@@ -56,14 +60,15 @@ export const createAdminBooking = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { isOverlapError, OVERLAP_MESSAGE } = await import("./booking.server");
-    const win = await validateWindow(data.barberId, data.serviceId, data.date, data.time);
+    const win = await validateWindow(data.barberId, data.serviceId, data.date, data.time, data.confirmException);
     let customerId = data.customerId;
     if (!customerId && data.newCustomer) {
       const { upsertCustomer } = await import("./customers.server");
       const n = data.newCustomer;
       customerId = await upsertCustomer({ firstName: n.firstName, lastName: n.lastName, phone: n.phone, email: n.email || null, birthDate: n.birthDate || null });
     }
-    const snap = await customerSnapshot(customerId!);
+    if (!customerId) throw new Error("Seleziona o crea un cliente");
+    const snap = await customerSnapshot(customerId);
     const code = "NDP-" + Math.random().toString(36).slice(2, 6).toUpperCase();
     const { data: row, error } = await supabaseAdmin.from("appointments").insert({
       barber_id: data.barberId, service_id: data.serviceId, ...win, ...snap,
@@ -83,7 +88,7 @@ export const updateAdminBooking = createServerFn({ method: "POST" })
     const { isOverlapError, OVERLAP_MESSAGE } = await import("./booking.server");
     const { data: current } = await supabaseAdmin.from("appointments").select("status").eq("id", data.id).maybeSingle();
     if (!current) throw new Error("Appuntamento non trovato");
-    const win = await validateWindow(data.barberId, data.serviceId, data.date, data.time, data.id);
+    const win = await validateWindow(data.barberId, data.serviceId, data.date, data.time, data.confirmException, data.id);
     const snap = await customerSnapshot(data.customerId);
     const { error } = await supabaseAdmin.from("appointments").update({
       barber_id: data.barberId, service_id: data.serviceId, ...win, ...snap,
@@ -117,7 +122,7 @@ export const completeAdminBooking = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (data.mode === "paid" && data.amount === undefined) throw new Error("Inserisci l'importo ricevuto");
-    const amount = data.mode === "complimentary" ? 0 : Math.round(data.amount! * 100) / 100;
+    const amount = data.mode === "complimentary" ? 0 : Math.round((data.amount ?? 0) * 100) / 100;
     const { error } = await supabaseAdmin.from("appointments")
       .update({ status: "completed", payment_status: data.mode, amount_paid: amount })
       .eq("id", data.id).neq("status", "cancelled");
@@ -135,3 +140,34 @@ export const saveAdminCustomer = createServerFn({ method: "POST" })
     const id = await upsertCustomer({ firstName: data.firstName, lastName: data.lastName, phone: data.phone, email: data.email || null, birthDate: data.birthDate || null });
     return { id };
   });
+
+export const saveAdminService = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => serviceSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...fields } = data;
+    const query = id ? supabaseAdmin.from("services").update(fields).eq("id", id) : supabaseAdmin.from("services").insert(fields);
+    const { data: row, error } = await query.select("id").single();
+    if (error || !row) throw new Error("Impossibile salvare il servizio");
+    return row;
+  });
+
+export const checkAdminWorkingHours = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ barberId: bookingFields.barberId, serviceId: bookingFields.serviceId, date: bookingFields.date, time: bookingFields.time }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: svc } = await context.supabase.from("services").select("duration_min").eq("id", data.serviceId).single();
+    if (!svc) throw new Error("Servizio non trovato");
+    const { isWithinWorkingHours } = await import("./booking.server");
+    return { inside: await isWithinWorkingHours(data.barberId, data.date, data.time, svc.duration_min) };
+  });
+
+export const getStaffBootstrap = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { count, error } = await supabaseAdmin.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "admin");
+  if (error) throw new Error("Impossibile verificare il primo accesso");
+  return { signupOpen: count === 0 };
+});

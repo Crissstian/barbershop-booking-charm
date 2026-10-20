@@ -18,3 +18,7 @@
 - Revenue = SUM(amount_paid) of completed+paid appointments only (`src/lib/report.ts`, tested). Why: complimentary/pending must not count.
 - Invite-code shortcut is isolated in `src/lib/invite.server.ts`. Why: removable later.
 - Tests: `bunx vitest run --config vitest.config.ts`.
+- Service amounts remain numeric with `price_from`; formatting is centralized in `servicePrice`. Why: consistent fixed/starting prices everywhere.
+- Service editing uses authenticated `saveAdminService`; category changes synchronize `barber_services` from staff category eligibility. Why: new services inherit configurable eligibility without name checks.
+- Slot math and working-window confirmation use pure `booking-rules`, with authoritative server checks on admin and public writes. Why: no accidental overtime or overlap regressions.
+- Staff bootstrap is serialized by an auth lifecycle trigger; only the first self-service account or trusted server invitations can create staff. Why: UI hiding is not access control.

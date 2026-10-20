@@ -10,10 +10,9 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const url = z.string().trim().max(2000).refine((v) => v === "" || v.startsWith("/") || v.startsWith("https://"), "Indirizzo immagine non valido");
 const admin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin;
-const auth = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]);
 
 /* ---------- Staff ---------- */
-export const saveAdminBarber = auth
+export const saveAdminBarber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     id: uuid, name: z.string().trim().min(1).max(60), role_title: z.string().trim().min(1).max(80),
     bio: z.string().trim().max(600), photo_url: url, active: z.boolean(), serviceIds: z.array(uuid).max(100),
@@ -48,7 +47,7 @@ async function writeHours(barberId: string, days: z.infer<typeof daysSchema>) {
   const rows = days.flatMap((d) => d.ranges.map((r) => ({ barber_id: barberId, weekday: d.weekday, start_time: r.start, end_time: r.end })));
   if (rows.length) { const { error } = await db.from("working_hours").insert(rows); if (error) throw new Error("Impossibile salvare gli orari"); }
 }
-export const saveAdminHours = auth
+export const saveAdminHours = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ barberId: uuid, days: daysSchema, copyTo: z.array(uuid).max(10).default([]) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -57,7 +56,7 @@ export const saveAdminHours = auth
     return { ok: true };
   });
 
-export const addAdminBlock = auth
+export const addAdminBlock = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ barberId: uuid, mode: z.enum(["hours", "days"]), from: day, to: day, fromTime: hhmm.optional(), toTime: hhmm.optional(), reason: z.string().trim().max(120).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -74,7 +73,7 @@ export const addAdminBlock = auth
     if (error) throw new Error("Impossibile salvare l'assenza");
     return { ok: true };
   });
-export const removeAdminBlock = auth.inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
+export const removeAdminBlock = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
   await assertAdmin(context);
   await (await admin()).from("blocked_slots").delete().eq("id", data.id);
   return { ok: true };
@@ -85,7 +84,7 @@ const ruleSchema = z.object({
   id: uuid.optional(), customerId: uuid, barberId: uuid, serviceId: uuid, weekday: z.number().int().min(0).max(6), time: hhmm,
   intervalWeeks: z.union([z.literal(1), z.literal(2)]), startDate: day, endDate: day.optional().or(z.literal("")), notes: z.string().trim().max(300).optional(),
 });
-export const saveAdminRecurring = auth.inputValidator((d) => ruleSchema.parse(d)).handler(async ({ data, context }) => {
+export const saveAdminRecurring = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => ruleSchema.parse(d)).handler(async ({ data, context }) => {
   await assertAdmin(context);
   const db = await admin();
   const { canPerform, recurringBusy, romeToUtc, todayRome, addDays } = await import("./booking.server");
@@ -116,7 +115,7 @@ export const saveAdminRecurring = auth.inputValidator((d) => ruleSchema.parse(d)
   return { ok: true };
 });
 
-export const setAdminRecurringState = auth
+export const setAdminRecurringState = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: uuid, action: z.enum(["pause", "resume", "end", "skip-next"]) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -145,7 +144,7 @@ export const setAdminRecurringState = auth
   });
 
 /** Occorrenze virtuali di un giorno per l'agenda. */
-export const getAdminRecurringDay = auth.inputValidator((d) => z.object({ date: day }).parse(d)).handler(async ({ data, context }) => {
+export const getAdminRecurringDay = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => z.object({ date: day }).parse(d)).handler(async ({ data, context }) => {
   await assertAdmin(context);
   const db = await admin();
   const { romeToUtc } = await import("./booking.server");
@@ -167,7 +166,7 @@ export const getAdminRecurringDay = auth.inputValidator((d) => z.object({ date: 
 });
 
 /** Trasforma un'occorrenza in un vero appuntamento: completato, annullato o spostato. */
-export const materializeAdminRecurring = auth
+export const materializeAdminRecurring = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     recurringId: uuid, date: day, action: z.enum(["complete", "cancel", "move"]),
     mode: z.enum(["paid", "complimentary"]).optional(), amount: z.number().min(0).max(99999).optional(),
@@ -208,7 +207,7 @@ export const materializeAdminRecurring = auth
   });
 
 /* ---------- Prodotti ---------- */
-export const saveAdminProduct = auth
+export const saveAdminProduct = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: uuid.optional(), brand: z.string().trim().max(80), name: z.string().trim().min(1).max(120), description: z.string().trim().max(400), image_url: url, sort: z.number().int().min(0).max(9999), active: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -219,14 +218,14 @@ export const saveAdminProduct = auth
     if (error) throw new Error("Impossibile salvare il prodotto");
     return { ok: true };
   });
-export const deleteAdminProduct = auth.inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
+export const deleteAdminProduct = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
   await assertAdmin(context);
   await (await admin()).from("products").delete().eq("id", data.id);
   return { ok: true };
 });
 
 /* ---------- Clienti e Membership ---------- */
-export const getAdminCustomer = auth.inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
+export const getAdminCustomer = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
   await assertAdmin(context);
   const db = await admin();
   const { todayRome } = await import("./booking.server");
@@ -250,7 +249,7 @@ export const getAdminCustomer = auth.inputValidator((d) => z.object({ id: uuid }
   };
 });
 
-export const updateAdminCustomerContact = auth
+export const updateAdminCustomerContact = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: uuid, phone: z.string().trim().min(6).max(25), email: z.string().trim().toLowerCase().email().max(120).or(z.literal("")), birthDate: day.or(z.literal("")) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
@@ -259,14 +258,14 @@ export const updateAdminCustomerContact = auth
     return { ok: true };
   });
 
-export const redeemAdminReward = auth.inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
+export const redeemAdminReward = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d) => z.object({ id: uuid }).parse(d)).handler(async ({ data, context }) => {
   await assertAdmin(context);
   await (await admin()).from("customer_rewards").update({ status: "redeemed", redeemed_at: new Date().toISOString() }).eq("id", data.id).eq("status", "available");
   return { ok: true };
 });
 
 /** Compleanni di oggi: assicura una sola Barba omaggio per anno. */
-export const getAdminBirthdays = auth.handler(async ({ context }) => {
+export const getAdminBirthdays = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await assertAdmin(context);
   const db = await admin();
   const { todayRome } = await import("./booking.server");

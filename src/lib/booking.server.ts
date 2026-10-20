@@ -30,21 +30,40 @@ export function addDays(date: string, n: number) {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
+/** Messaggio unico mostrato quando PostgreSQL rifiuta una sovrapposizione. */
+export const OVERLAP_MESSAGE = "Questo orario è appena stato occupato. Scegli un altro slot.";
+export function isOverlapError(err: { code?: string } | null | undefined) {
+  return err?.code === "23P01";
+}
+
+/** Professionisti attivi abilitati a un servizio (tabella barber_services). */
+export async function eligibleBarberIds(serviceId: string) {
+  const { data } = await supabaseAdmin.from("barber_services").select("barber_id, barbers!inner(active)").eq("service_id", serviceId).eq("barbers.active", true);
+  return new Set((data ?? []).map((r) => r.barber_id));
+}
+
+export async function canPerform(barberId: string, serviceId: string) {
+  return (await eligibleBarberIds(serviceId)).has(barberId);
+}
+
 type Busy = { barber_id: string; s: number; e: number };
 
-async function loadData(fromDate: string, toDate: string) {
+async function loadData(fromDate: string, toDate: string, excludeId?: string) {
   const from = new Date(romeToUtc(fromDate, "00:00")).toISOString();
   const to = new Date(romeToUtc(addDays(toDate, 1), "00:00")).toISOString();
-  const [barbers, hours, appts, blocks] = await Promise.all([
+  let apptQ = supabaseAdmin.from("appointments").select("id,barber_id,starts_at,ends_at").eq("status", "confirmed").lt("starts_at", to).gt("ends_at", from);
+  if (excludeId) apptQ = apptQ.neq("id", excludeId);
+  const [barbers, hours, appts, blocks, links] = await Promise.all([
     supabaseAdmin.from("barbers").select("id,name,sort").eq("active", true).order("sort"),
     supabaseAdmin.from("working_hours").select("*"),
-    supabaseAdmin.from("appointments").select("barber_id,starts_at,ends_at").eq("status", "confirmed").lt("starts_at", to).gt("ends_at", from),
+    apptQ,
     supabaseAdmin.from("blocked_slots").select("barber_id,starts_at,ends_at").lt("starts_at", to).gt("ends_at", from),
+    supabaseAdmin.from("barber_services").select("barber_id,service_id,services(duration_min)"),
   ]);
   const busy: Busy[] = [...(appts.data ?? []), ...(blocks.data ?? [])].map((b) => ({
     barber_id: b.barber_id, s: Date.parse(b.starts_at), e: Date.parse(b.ends_at),
   }));
-  return { barbers: barbers.data ?? [], hours: hours.data ?? [], busy };
+  return { barbers: barbers.data ?? [], hours: hours.data ?? [], busy, links: links.data ?? [] };
 }
 
 type Data = Awaited<ReturnType<typeof loadData>>;
@@ -67,18 +86,24 @@ function barberSlots(data: Data, barberId: string, date: string, dur: number) {
   return out;
 }
 
-export async function getDaySlots(barberId: string | "any", date: string, dur: number) {
+/** Slot del giorno; con "any" cerca solo tra i professionisti abilitati al servizio. */
+export async function getDaySlots(barberId: string | "any", date: string, dur: number, serviceId: string) {
   const data = await loadData(date, date);
+  const allowed = new Set(data.links.filter((l) => l.service_id === serviceId).map((l) => l.barber_id));
+  const active = data.barbers.map((b) => b.id).filter((id) => allowed.has(id));
+  const ids = barberId === "any" ? active : active.filter((id) => id === barberId);
   const map = new Map<number, string>();
-  const ids = barberId === "any" ? data.barbers.map((b) => b.id) : [barberId];
   for (const id of ids) for (const t of barberSlots(data, id, date, dur)) if (!map.has(t)) map.set(t, id);
   return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([t, id]) => ({ start: new Date(t).toISOString(), barberId: id }));
 }
 
-export async function getNextSlots(dur: number) {
+/** Primo orario libero per professionista, sulla durata del suo servizio più breve. */
+export async function getNextSlots(fallbackDur: number) {
   const from = todayRome();
   const data = await loadData(from, addDays(from, 21));
   return data.barbers.map((b) => {
+    const durs = data.links.filter((l) => l.barber_id === b.id).map((l) => l.services?.duration_min ?? fallbackDur);
+    const dur = durs.length ? Math.min(...durs) : fallbackDur;
     for (let i = 0; i <= 21; i++) {
       const s = barberSlots(data, b.id, addDays(from, i), dur);
       if (s.length) return { barberId: b.id, start: new Date(s[0]!).toISOString() };
@@ -91,4 +116,18 @@ export async function isFree(barberId: string, startMs: number, dur: number) {
   const date = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(startMs));
   const data = await loadData(date, date);
   return barberSlots(data, barberId, date, dur).includes(startMs);
+}
+
+/** Controllo staff: nessuna sovrapposizione con appuntamenti confermati o orari bloccati. */
+export async function hasConflict(barberId: string, startMs: number, endMs: number, excludeId?: string) {
+  const s = new Date(startMs).toISOString();
+  const e = new Date(endMs).toISOString();
+  let q = supabaseAdmin.from("appointments").select("id", { count: "exact", head: true })
+    .eq("barber_id", barberId).eq("status", "confirmed").lt("starts_at", e).gt("ends_at", s);
+  if (excludeId) q = q.neq("id", excludeId);
+  const [a, b] = await Promise.all([
+    q,
+    supabaseAdmin.from("blocked_slots").select("id", { count: "exact", head: true }).eq("barber_id", barberId).lt("starts_at", e).gt("ends_at", s),
+  ]);
+  return (a.count ?? 0) > 0 || (b.count ?? 0) > 0;
 }

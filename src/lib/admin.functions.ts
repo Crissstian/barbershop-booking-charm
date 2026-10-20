@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 type Ctx = { supabase: SupabaseClient<Database>; userId: string };
-async function assertAdmin(context: Ctx) {
+export async function assertAdmin(context: Ctx) {
   const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
   if (!data) throw new Error("Forbidden");
 }
@@ -32,7 +32,7 @@ const bookingFields = {
 };
 
 /** Verifica servizio, compatibilità e sovrapposizioni; restituisce la finestra calcolata. */
-async function validateWindow(barberId: string, serviceId: string, date: string, time: string, confirmException: boolean, excludeId?: string) {
+export async function validateWindow(barberId: string, serviceId: string, date: string, time: string, confirmException: boolean, excludeId?: string, skip?: { recurringId: string; date: string }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { canPerform, hasConflict, romeToUtc, isWithinWorkingHours, OVERLAP_MESSAGE } = await import("./booking.server");
   const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", serviceId).eq("active", true).maybeSingle();
@@ -41,11 +41,11 @@ async function validateWindow(barberId: string, serviceId: string, date: string,
   requireWorkingHoursConfirmation(await isWithinWorkingHours(barberId, date, time, svc.duration_min), confirmException);
   const startMs = romeToUtc(date, time);
   const endMs = startMs + svc.duration_min * 60000;
-  if (await hasConflict(barberId, startMs, endMs, excludeId)) throw new Error(OVERLAP_MESSAGE);
+  if (await hasConflict(barberId, startMs, endMs, excludeId, skip)) throw new Error(OVERLAP_MESSAGE);
   return { starts_at: new Date(startMs).toISOString(), ends_at: new Date(endMs).toISOString() };
 }
 
-async function customerSnapshot(customerId: string) {
+export async function customerSnapshot(customerId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: c } = await supabaseAdmin.from("customers").select("first_name,last_name,phone,email").eq("id", customerId).maybeSingle();
   if (!c) throw new Error("Cliente non trovato");
@@ -117,17 +117,20 @@ export const completeAdminBooking = createServerFn({ method: "POST" })
     id: z.string().uuid(),
     mode: z.enum(["paid", "complimentary"]),
     amount: z.number().min(0).max(99999).optional(),
+    redeemRewardId: z.string().uuid().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (data.mode === "paid" && data.amount === undefined) throw new Error("Inserisci l'importo ricevuto");
     const amount = data.mode === "complimentary" ? 0 : Math.round((data.amount ?? 0) * 100) / 100;
-    const { error } = await supabaseAdmin.from("appointments")
+    const { data: row, error } = await supabaseAdmin.from("appointments")
       .update({ status: "completed", payment_status: data.mode, amount_paid: amount })
-      .eq("id", data.id).neq("status", "cancelled");
-    if (error) throw new Error("Impossibile completare l'appuntamento");
-    return { ok: true, amount };
+      .eq("id", data.id).neq("status", "cancelled").select("customer_id").maybeSingle();
+    if (error || !row) throw new Error("Impossibile completare l'appuntamento");
+    if (data.redeemRewardId && row.customer_id) await supabaseAdmin.from("customer_rewards").update({ status: "redeemed", redeemed_at: new Date().toISOString() }).eq("id", data.redeemRewardId).eq("customer_id", row.customer_id);
+    const { syncRewards } = await import("./membership.server");
+    return { ok: true, amount, rewards: await syncRewards(row.customer_id) };
   });
 
 /** Staff: crea o aggiorna un cliente in anagrafica (ricerca per email/telefono). */

@@ -107,7 +107,7 @@ function Dashboard({ userId }: { userId: string }) {
     const [a, b, s, c, w, l, cu] = await Promise.all([
       supabase.from("appointments").select("id,starts_at,ends_at,status,customer_name,customer_phone,customer_email,customer_id,notes,staff_notes,whatsapp_sent_at,code,barber_id,service_id,payment_status,amount_paid,services(name,price,price_from)").gte("starts_at", from).lt("starts_at", to).order("starts_at"),
       supabase.from("barbers").select("id,name,active").order("sort"),
-      supabase.from("services").select("id,name,category,price,price_from,duration_min,sort,active").order("sort"),
+      supabase.from("services").select("id,name,category,price,price_from,duration_min,sort,active,counts_as_haircut").order("sort"),
       supabase.from("customer_approvals").select("id,first_name,last_name,email,phone,status,created_at").order("created_at", { ascending: false }),
       supabase.from("waitlist").select("id,email,phone,day,created_at").is("notified_at", null).order("created_at", { ascending: false }),
       supabase.from("barber_services").select("barber_id,service_id"),

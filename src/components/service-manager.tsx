@@ -9,7 +9,7 @@ import { servicePrice } from "@/lib/format";
 
 export type ManagedService = ServiceInput & { id: string };
 const field = "w-full border bg-card px-3 py-2 text-sm outline-none focus:border-accent";
-const empty: ServiceInput = { name: "", category: "capelli", price: 0, price_from: false, duration_min: 30, sort: 0, active: true };
+const empty: ServiceInput = { name: "", category: "capelli", price: 0, price_from: false, duration_min: 30, sort: 0, active: true, counts_as_haircut: false };
 
 export function ServiceManager({ services, onChange }: { services: ManagedService[]; onChange: () => void }) {
   const [editing, setEditing] = useState<ServiceInput | null>(null);
@@ -39,11 +39,12 @@ export function ServiceManager({ services, onChange }: { services: ManagedServic
       <label className="text-sm">Ordine<input type="number" min="0" required value={editing.sort} onChange={(e) => setEditing({ ...editing, sort: Number(e.target.value) })} className={`${field} mt-1`} /></label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.price_from} onChange={(e) => setEditing({ ...editing, price_from: e.target.checked })} />Prezzo a partire da</label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} />Attivo</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.counts_as_haircut} onChange={(e) => setEditing({ ...editing, counts_as_haircut: e.target.checked })} />Conta per obiettivi Membership</label>
       <div className="flex gap-2 sm:col-span-2 lg:col-span-4"><Button disabled={busy}><Save />Salva servizio</Button><Button type="button" variant="ghost" onClick={() => setEditing(null)}><X />Annulla</Button></div>
     </form>}
     <ul className="mt-5 divide-y divide-border">
       {services.map((s) => <li key={s.id} className={`flex items-center justify-between gap-3 py-4 ${s.active ? "" : "opacity-60"}`}>
-        <div className="min-w-0"><p className="font-serif text-xl">{s.name}</p><p className="text-sm capitalize text-muted-foreground">{s.category} · {s.duration_min} min · {servicePrice(s)} · {s.active ? "Attivo" : "Non attivo"}</p></div>
+        <div className="min-w-0"><p className="font-serif text-xl">{s.name}</p><p className="text-sm capitalize text-muted-foreground">{s.category} · {s.duration_min} min · {servicePrice(s)} · {s.active ? "Attivo" : "Non attivo"}{s.counts_as_haircut ? " · Membership" : ""}</p></div>
         <Button size="icon" variant="ghost" aria-label={`Modifica ${s.name}`} title={`Modifica ${s.name}`} onClick={() => setEditing(s)}><Pencil /></Button>
       </li>)}
     </ul>

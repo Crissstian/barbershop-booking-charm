@@ -43,3 +43,13 @@
 ## Checkpoint rimovibile — Tessera Membro & Gift Card
 - [x] Pagina /esclusiva con tessera membro interattiva e configuratore gift card
 - Per rimuovere tutto: elimina src/routes/esclusiva.tsx e src/components/exclusive/, e togli il link "Membership" nell'header di src/routes/index.tsx
+
+## Fase — Fondazioni operative
+- [x] Staff definitivo (4) + servizi abilitati per professionista
+- [x] Booking filtrato per servizio (anche lato server)
+- [x] Anagrafica clienti centralizzata
+- [x] Admin: nuovo/modifica/annulla appuntamento, completato con importo/omaggio
+- [x] Resoconto giornaliero e incasso per professionista
+- [x] Vincolo anti doppia prenotazione nel database
+- [x] "Tutto pieno? Contattaci"
+- [ ] Verifica visiva area staff da loggati (bloccato: nessun account staff creato)

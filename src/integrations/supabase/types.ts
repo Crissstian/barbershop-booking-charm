@@ -16,15 +16,18 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          amount_paid: number | null
           barber_id: string
           code: string
           created_at: string | null
           customer_email: string | null
+          customer_id: string | null
           customer_name: string
           customer_phone: string
           ends_at: string
           id: string
           notes: string | null
+          payment_status: string
           reminder_sent_at: string | null
           service_id: string
           staff_notes: string | null
@@ -34,15 +37,18 @@ export type Database = {
           whatsapp_sent_at: string | null
         }
         Insert: {
+          amount_paid?: number | null
           barber_id: string
           code: string
           created_at?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_name: string
           customer_phone: string
           ends_at: string
           id?: string
           notes?: string | null
+          payment_status?: string
           reminder_sent_at?: string | null
           service_id: string
           staff_notes?: string | null
@@ -52,15 +58,18 @@ export type Database = {
           whatsapp_sent_at?: string | null
         }
         Update: {
+          amount_paid?: number | null
           barber_id?: string
           code?: string
           created_at?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_name?: string
           customer_phone?: string
           ends_at?: string
           id?: string
           notes?: string | null
+          payment_status?: string
           reminder_sent_at?: string | null
           service_id?: string
           staff_notes?: string | null
@@ -78,7 +87,50 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barber_services: {
+        Row: {
+          barber_id: string
+          created_at: string
+          id: string
+          service_id: string
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string
+          id?: string
+          service_id: string
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string
+          id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_services_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barbers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barber_services_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
@@ -93,7 +145,9 @@ export type Database = {
           created_at: string | null
           id: string
           name: string
+          photo_url: string | null
           role_title: string
+          slug: string | null
           sort: number
         }
         Insert: {
@@ -102,7 +156,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           name: string
+          photo_url?: string | null
           role_title?: string
+          slug?: string | null
           sort?: number
         }
         Update: {
@@ -111,7 +167,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+          photo_url?: string | null
           role_title?: string
+          slug?: string | null
           sort?: number
         }
         Relationships: []
@@ -151,6 +209,7 @@ export type Database = {
       customer_approvals: {
         Row: {
           created_at: string
+          customer_id: string | null
           email: string
           first_name: string
           id: string
@@ -162,6 +221,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           email: string
           first_name: string
           id?: string
@@ -173,6 +233,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           email?: string
           first_name?: string
           id?: string
@@ -181,6 +242,53 @@ export type Database = {
           phone?: string | null
           reviewed_at?: string | null
           status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_approvals_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          active: boolean
+          birth_date: string | null
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone: string
+          phone_normalized: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string
+          phone_normalized?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          birth_date?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string
+          phone_normalized?: string | null
+          updated_at?: string
         }
         Relationships: []
       }

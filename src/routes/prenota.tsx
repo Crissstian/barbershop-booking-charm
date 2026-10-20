@@ -7,6 +7,10 @@ import { checkCustomerApproval, createBooking, getSlots, joinWaitlist, requestCu
 import { catalogQuery } from "./index";
 import { addDays, euro, fmtDay, fmtTime, romeDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { barbersForService } from "@/lib/report";
+import { waLink } from "@/lib/salon";
+
+const FULL_MESSAGE = "Ciao, non trovo disponibilità online e vorrei verificare se è possibile trovare un posto.";
 
 export const Route = createFileRoute("/prenota")({
   validateSearch: z.object({ barber: z.string().optional(), service: z.string().optional() }),
@@ -49,6 +53,15 @@ function Booking() {
     enabled: step === 2 && !!serviceId && !!barberId,
   });
   const days = Array.from({ length: 14 }, (_, i) => addDays(romeDate(), i));
+  const eligible = serviceId ? barbersForService(data.barbers, data.links, serviceId) : data.barbers;
+  const dayEmpty = slots.data?.length === 0;
+  const allDays = useQuery({
+    queryKey: ["slots-14", barberId, serviceId],
+    queryFn: async () => (await Promise.all(days.map((d) => getSlots({ data: { barberId, serviceId, date: d } })))).some((l) => l.length > 0),
+    enabled: step === 2 && dayEmpty && !!serviceId && !!barberId,
+    staleTime: 60_000,
+  });
+  const fullyBooked = allDays.data === false;
   const barberName = (id: string) => data.barbers.find((b) => b.id === id)?.name;
 
   async function verify(e: React.FormEvent) {
@@ -152,7 +165,11 @@ function Booking() {
         <section className="booking-panel mt-8 space-y-3">
           <h1 className="font-serif text-4xl">Cosa facciamo oggi?</h1>
           {data.services.map((s) => (
-            <button key={s.id} className={`${choice} ${serviceId === s.id ? active : ""}`} onClick={() => { setService(s.id); setSlot(null); setStep(barberId ? 2 : 1); }}>
+            <button key={s.id} className={`${choice} ${serviceId === s.id ? active : ""}`} onClick={() => {
+              const ok = barberId === "any" || barbersForService(data.barbers, data.links, s.id).some((b) => b.id === barberId);
+              if (!ok) setBarber("");
+              setService(s.id); setSlot(null); setStep(barberId && ok ? 2 : 1);
+            }}>
               <span className="flex justify-between font-serif text-2xl"><span>{s.name}</span><span>{euro(Number(s.price))}</span></span>
               <span className="text-sm text-muted-foreground">{s.description} · {s.duration_min} min</span>
             </button>
@@ -167,7 +184,7 @@ function Booking() {
             <span className="font-serif text-2xl">Primo disponibile</span>
             <span className="block text-sm text-muted-foreground">Ti mostriamo tutti gli orari liberi del salone</span>
           </button>
-          {data.barbers.map((b) => (
+          {eligible.map((b) => (
             <button key={b.id} className={`${choice} ${barberId === b.id ? active : ""}`} onClick={() => { setBarber(b.id); setSlot(null); setStep(2); }}>
               <span className="font-serif text-2xl">{b.name}</span>
               <span className="block text-sm text-muted-foreground">{b.role_title}</span>
@@ -211,6 +228,11 @@ function Booking() {
                 >
                   {waiting ? "Attendi…" : "Avvisami se si libera"}
                 </button>
+                <div className={`mt-4 border-t border-border pt-4 ${fullyBooked ? "full-alert" : ""}`}>
+                  <p className="font-serif text-2xl">{fullyBooked ? "Tutto pieno nei prossimi 14 giorni?" : "Tutto pieno?"}</p>
+                  {fullyBooked && <p className="mt-1 text-sm text-muted-foreground">Scrivici: spesso troviamo un posto fuori dal calendario online.</p>}
+                  <a href={waLink(FULL_MESSAGE)} target="_blank" rel="noreferrer" className="wa-cta mt-3 inline-block border border-accent bg-background px-6 py-3 text-[11px] uppercase tracking-[0.25em]">Contattaci</a>
+                </div>
               </div>
             )}
             {slots.data?.map((s) => (

@@ -8,3 +8,13 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Architecture rules
+- Barber↔service eligibility lives only in `barber_services`; never hardcode names. Why: staff/services change without code edits.
+- Portraits resolve by `barbers.photo_url`, then slug map, then placeholder — never by array index. Why: order/staff count can change.
+- `customers` is the central client record; appointments keep historical name/phone/email snapshots plus `customer_id`. Why: compatibility and future loyalty.
+- Double booking is blocked by the `appointments_no_overlap` EXCLUDE constraint (confirmed only); server maps SQLSTATE 23P01 to a user message. Why: atomic protection.
+- Admin writes on appointments/approvals go through `src/lib/admin.functions.ts` / `reviewCustomerApproval` with server-side has_role checks. Why: UI is not a security boundary.
+- Revenue = SUM(amount_paid) of completed+paid appointments only (`src/lib/report.ts`, tested). Why: complimentary/pending must not count.
+- Invite-code shortcut is isolated in `src/lib/invite.server.ts`. Why: removable later.
+- Tests: `bunx vitest run --config vitest.config.ts`.

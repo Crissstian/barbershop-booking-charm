@@ -242,3 +242,9 @@
   .cinema-intro { display: none; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* Booking: tutto pieno — enfasi CTA contatto */
+.full-alert { animation: full-pulse 2.4s ease-in-out infinite; }
+@keyframes full-pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 0%, transparent); } 50% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--accent) 18%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .full-alert { animation: none; } }
+.portrait-placeholder { background: radial-gradient(120% 90% at 30% 20%, var(--card), var(--secondary) 55%, var(--muted)); }

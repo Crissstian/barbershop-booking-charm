@@ -120,13 +120,14 @@ export const joinWaitlist = createServerFn({ method: "POST" })
 export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { getNextSlots } = await import("./booking.server");
-  const [b, s, l] = await Promise.all([
+  const [b, s, l, p] = await Promise.all([
     supabaseAdmin.from("barbers").select("id,name,role_title,bio,sort,slug,photo_url").eq("active", true).order("sort"),
     supabaseAdmin.from("services").select("id,name,description,category,duration_min,price,price_from,sort").eq("active", true).order("sort"),
     supabaseAdmin.from("barber_services").select("barber_id,service_id"),
+    supabaseAdmin.from("products").select("id,brand,name,description,image_url").eq("active", true).order("sort"),
   ]);
   const next = await getNextSlots(45);
-  return { barbers: b.data ?? [], services: s.data ?? [], links: l.data ?? [], next };
+  return { barbers: b.data ?? [], services: s.data ?? [], links: l.data ?? [], products: p.data ?? [], next };
 });
 
 export const getSlots = createServerFn({ method: "GET" })

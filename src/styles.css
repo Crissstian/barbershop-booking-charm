@@ -248,3 +248,16 @@
 @keyframes full-pulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 0%, transparent); } 50% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--accent) 18%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .full-alert { animation: none; } }
 .portrait-placeholder { background: radial-gradient(120% 90% at 30% 20%, var(--card), var(--secondary) 55%, var(--muted)); }
+
+/* Prodotti fotografici + celebrazione premi */
+.product-photo { transition: transform 1.2s cubic-bezier(.16,1,.3,1), filter .7s ease; filter: saturate(.9); }
+.product-card:hover .product-photo { transform: scale(1.06); filter: saturate(1); }
+.reward-overlay { animation: reward-fade 4.6s ease forwards; }
+.reward-card { animation: reward-rise .9s cubic-bezier(.16,1,.3,1) both; }
+.reward-line { transform-origin: center; animation: reward-line 1.2s .35s cubic-bezier(.16,1,.3,1) both; }
+.reward-shine { background: linear-gradient(110deg, transparent 30%, color-mix(in oklab, var(--champagne) 45%, transparent) 50%, transparent 70%); background-size: 250% 100%; animation: reward-shine 2.2s .5s ease both; }
+@keyframes reward-fade { 0%, 85% { opacity: 1 } 100% { opacity: 0 } }
+@keyframes reward-rise { from { opacity: 0; transform: translateY(24px) scale(.96); filter: blur(6px) } to { opacity: 1; transform: none; filter: none } }
+@keyframes reward-line { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes reward-shine { from { background-position: 120% 0 } to { background-position: -120% 0 } }
+@media (prefers-reduced-motion: reduce) { .reward-card, .reward-line, .reward-shine { animation: none } }

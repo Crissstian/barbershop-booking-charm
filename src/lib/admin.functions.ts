@@ -124,3 +124,14 @@ export const completeAdminBooking = createServerFn({ method: "POST" })
     if (error) throw new Error("Impossibile completare l'appuntamento");
     return { ok: true, amount };
   });
+
+/** Staff: crea o aggiorna un cliente in anagrafica (ricerca per email/telefono). */
+export const saveAdminCustomer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => newCustomer.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { upsertCustomer } = await import("./customers.server");
+    const id = await upsertCustomer({ firstName: data.firstName, lastName: data.lastName, phone: data.phone, email: data.email || null, birthDate: data.birthDate || null });
+    return { id };
+  });

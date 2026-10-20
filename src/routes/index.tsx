@@ -13,13 +13,17 @@ import danielePortrait from "@/assets/barber-daniele.jpg";
 import antonioPortrait from "@/assets/barber-antonio.jpg";
 import salonHero from "@/assets/salon-hero-light.jpg";
 
+/** Ritratti locali per slug: indipendenti dall'ordinamento. photo_url dal database ha la precedenza. */
+const PORTRAITS: Record<string, string> = { nicola: nicolaPortrait, antonio: antonioPortrait, daniele: danielePortrait };
+const portraitFor = (b: { slug: string | null; photo_url: string | null }) => b.photo_url || (b.slug ? PORTRAITS[b.slug] : undefined);
+
 export const catalogQuery = queryOptions({ queryKey: ["catalog"], queryFn: () => getCatalog(), staleTime: 30_000 });
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "NDP Nicola De Pompeis — Esclusive Hair Saloon" },
-      { name: "description", content: "Tre poltrone, un solo standard. Prenota in pochi secondi il tuo taglio da Nicola, Daniele o Antonio." },
+      { name: "description", content: "Prenota in pochi secondi il tuo appuntamento con Nicola, Antonio, Daniele o Alessia." },
       { property: "og:title", content: "NDP Nicola De Pompeis — Esclusive Hair Saloon" },
       { property: "og:description", content: "Prenota online il tuo taglio: vedi subito il primo orario libero." },
       { property: "og:type", content: "website" },
@@ -39,7 +43,6 @@ function Home() {
     { number: "02", name: "Olio Nutriente", type: "Beard ritual", note: "Legno di sandalo e cedro", shape: "product-bottle" },
     { number: "03", name: "Shampoo Daily", type: "Hair care", note: "Detersione delicata quotidiana", shape: "product-tube" },
   ];
-  const portraits = [nicolaPortrait, danielePortrait, antonioPortrait];
 
   return (
     <main className="overflow-hidden bg-background pb-28 text-foreground">
@@ -89,7 +92,7 @@ function Home() {
         <ScrollReveal className="mx-auto max-w-6xl">
           <p className="text-[10px] uppercase tracking-[0.3em] text-accent">The Chair · La collezione</p>
           <SplitText text="Scegli la tua poltrona." className="mt-4 max-w-2xl font-serif text-5xl leading-none md:text-7xl" />
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">Tre professionisti, un rituale costruito intorno al tuo stile.</p>
+          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">Quattro professionisti, un rituale costruito intorno al tuo stile.</p>
         </ScrollReveal>
         <div className="mx-auto mt-16 max-w-6xl">
           {data.barbers.map((b, i) => {
@@ -99,9 +102,16 @@ function Home() {
                 <Tilt intensity={5}>
                 <Link to="/prenota" search={{ barber: b.id }} className="chair-card group relative grid min-h-[34rem] overflow-hidden border border-border bg-card md:grid-cols-[.85fr_1fr]">
                   <div className="relative min-h-96 overflow-hidden">
-                    <img src={portraits[i]} alt={`${b.name}, ${b.role_title}`} loading="lazy" width={1200} height={1600} className="barber-portrait absolute inset-0 h-full w-full object-cover" />
+                    {portraitFor(b) ? (
+                      <img src={portraitFor(b)} alt={`${b.name}, ${b.role_title}`} loading="lazy" width={1200} height={1600} className="barber-portrait absolute inset-0 h-full w-full object-cover" />
+                    ) : (
+                      <div className="portrait-placeholder absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                        <span className="font-serif text-[9rem] leading-none text-foreground/15 transition-transform duration-700 group-hover:scale-105">{b.name.charAt(0)}</span>
+                        <span className="absolute bottom-8 text-[9px] uppercase tracking-[0.4em] text-muted-foreground">NDP · Ritratto in arrivo</span>
+                      </div>
+                    )}
                     <div className="chair-shade absolute inset-0" />
-                    <span className="absolute left-6 top-5 z-10 font-serif text-6xl text-foreground/25">0{i + 1}</span>
+                    <span className="absolute left-6 top-5 z-10 font-serif text-6xl text-foreground/25">{String(i + 1).padStart(2, "0")}</span>
                   </div>
                   <div className="relative z-10 flex flex-col justify-end p-7 md:p-10">
                     <p className="text-[10px] uppercase tracking-[0.22em] text-accent">{b.role_title}</p>

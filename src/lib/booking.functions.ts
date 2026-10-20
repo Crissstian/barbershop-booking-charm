@@ -12,10 +12,6 @@ const personSchema = z.object({
   inviteCode: z.string().trim().max(40).optional(),
 });
 
-function inviteCodes() {
-  const extra = (process.env["NDP_INVITE_CODES"] ?? "").split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
-  return new Set(["NDPVIP", ...extra]);
-}
 
 export const checkCustomerApproval = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ email: emailSchema }).parse(d))
@@ -33,7 +29,8 @@ export const requestCustomerApproval = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sendWhatsAppText } = await import("./whatsapp.server");
-    const invited = !!data.inviteCode && inviteCodes().has(data.inviteCode.toUpperCase());
+    const { isValidInvite } = await import("./invite.server");
+    const invited = isValidInvite(data.inviteCode);
     const status = invited ? "approved" : "pending";
 
     const { data: existing } = await supabaseAdmin.from("customer_approvals")
@@ -41,6 +38,11 @@ export const requestCustomerApproval = createServerFn({ method: "POST" })
       .eq("email", data.email)
       .maybeSingle();
     if (existing?.status === "approved") return { status: "approved" as const };
+    let customerId: string | null = null;
+    if (invited) {
+      const { upsertCustomer } = await import("./customers.server");
+      customerId = await upsertCustomer({ firstName: data.firstName, lastName: data.lastName, email: data.email, phone: data.phone });
+    }
 
     const payload = {
       first_name: data.firstName,
@@ -49,6 +51,7 @@ export const requestCustomerApproval = createServerFn({ method: "POST" })
       invited_with: invited ? data.inviteCode!.toUpperCase() : null,
       status,
       reviewed_at: invited ? new Date().toISOString() : null,
+      ...(customerId ? { customer_id: customerId } : {}),
     };
     if (existing) {
       const { error } = await supabaseAdmin.from("customer_approvals").update(payload).eq("id", existing.id);
@@ -64,19 +67,31 @@ export const requestCustomerApproval = createServerFn({ method: "POST" })
     return { status: invited ? ("approved" as const) : ("pending" as const) };
   });
 
-/** Avvisa su WhatsApp un cliente appena autorizzato dallo staff. */
-export const notifyApprovedCustomer = createServerFn({ method: "POST" })
+/** Staff: autorizza o rifiuta una richiesta; se autorizza crea/aggiorna il cliente e lo avvisa. */
+export const reviewCustomerApproval = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d) => z.object({ id: z.string().uuid(), status: z.enum(["approved", "rejected"]) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
     if (!isAdmin) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sendWhatsAppText } = await import("./whatsapp.server");
-    const { data: row } = await supabaseAdmin.from("customer_approvals").select("first_name,phone,status").eq("id", data.id).maybeSingle();
-    if (!row?.phone || row.status !== "approved") return { sent: false };
-    const sent = await sendWhatsAppText(row.phone, `NDP Esclusive Hair Saloon\n\nCiao ${row.first_name}, il tuo accesso è stato confermato. Ora puoi prenotare il tuo appuntamento online.`);
-    return { sent };
+    const { data: row } = await supabaseAdmin.from("customer_approvals").select("first_name,last_name,email,phone").eq("id", data.id).maybeSingle();
+    if (!row) throw new Error("Richiesta non trovata");
+    let customerId: string | null = null;
+    if (data.status === "approved") {
+      const { upsertCustomer } = await import("./customers.server");
+      customerId = await upsertCustomer({ firstName: row.first_name, lastName: row.last_name, email: row.email, phone: row.phone });
+    }
+    const { error } = await supabaseAdmin.from("customer_approvals")
+      .update({ status: data.status, reviewed_at: new Date().toISOString(), ...(customerId ? { customer_id: customerId } : {}) })
+      .eq("id", data.id);
+    if (error) throw new Error("Impossibile aggiornare la richiesta");
+    let sent = false;
+    if (data.status === "approved" && row.phone) {
+      const { sendWhatsAppText } = await import("./whatsapp.server");
+      sent = await sendWhatsAppText(row.phone, `NDP Esclusive Hair Saloon\n\nCiao ${row.first_name}, il tuo accesso è stato confermato. Ora puoi prenotare il tuo appuntamento online.`);
+    }
+    return { sent, customerId };
   });
 
 export const joinWaitlist = createServerFn({ method: "POST" })
@@ -105,12 +120,13 @@ export const joinWaitlist = createServerFn({ method: "POST" })
 export const getCatalog = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { getNextSlots } = await import("./booking.server");
-  const [b, s] = await Promise.all([
-    supabaseAdmin.from("barbers").select("id,name,role_title,bio,sort").eq("active", true).order("sort"),
+  const [b, s, l] = await Promise.all([
+    supabaseAdmin.from("barbers").select("id,name,role_title,bio,sort,slug,photo_url").eq("active", true).order("sort"),
     supabaseAdmin.from("services").select("id,name,description,duration_min,price,sort").eq("active", true).order("sort"),
+    supabaseAdmin.from("barber_services").select("barber_id,service_id"),
   ]);
   const next = await getNextSlots(45);
-  return { barbers: b.data ?? [], services: s.data ?? [], next };
+  return { barbers: b.data ?? [], services: s.data ?? [], links: l.data ?? [], next };
 });
 
 export const getSlots = createServerFn({ method: "GET" })
@@ -120,7 +136,7 @@ export const getSlots = createServerFn({ method: "GET" })
     const { getDaySlots } = await import("./booking.server");
     const { data: svc } = await supabaseAdmin.from("services").select("duration_min").eq("id", data.serviceId).single();
     if (!svc) return [];
-    return getDaySlots(data.barberId as string, data.date, svc.duration_min);
+    return getDaySlots(data.barberId, data.date, svc.duration_min, data.serviceId);
   });
 
 export const createBooking = createServerFn({ method: "POST" })
@@ -136,23 +152,32 @@ export const createBooking = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { isFree } = await import("./booking.server");
+    const { isFree, canPerform, isOverlapError, OVERLAP_MESSAGE } = await import("./booking.server");
     const { data: approval } = await supabaseAdmin.from("customer_approvals")
-      .select("first_name,last_name,status")
+      .select("first_name,last_name,status,customer_id")
       .eq("email", data.email)
       .maybeSingle();
     if (approval?.status !== "approved") throw new Error("Questa email non è ancora autorizzata a prenotare.");
+    if (!(await canPerform(data.barberId, data.serviceId))) throw new Error("Questo professionista non esegue il servizio scelto.");
     const { data: svc } = await supabaseAdmin.from("services").select("name,duration_min").eq("id", data.serviceId).single();
     if (!svc) throw new Error("Servizio non trovato");
     const startMs = Date.parse(data.start);
     if (!(await isFree(data.barberId, startMs, svc.duration_min))) throw new Error("Questo orario non è più disponibile. Scegline un altro.");
+    let customerId = approval.customer_id;
+    if (!customerId) {
+      const { upsertCustomer } = await import("./customers.server");
+      customerId = await upsertCustomer({ firstName: approval.first_name, lastName: approval.last_name, email: data.email, phone: data.phone });
+      await supabaseAdmin.from("customer_approvals").update({ customer_id: customerId }).eq("email", data.email);
+    }
     const code = "NDP-" + Math.random().toString(36).slice(2, 6).toUpperCase();
     const { data: row, error } = await supabaseAdmin.from("appointments").insert({
       barber_id: data.barberId, service_id: data.serviceId,
       starts_at: new Date(startMs).toISOString(), ends_at: new Date(startMs + svc.duration_min * 60000).toISOString(),
       customer_name: `${approval.first_name} ${approval.last_name}`, customer_phone: data.phone, customer_email: data.email, notes: data.notes || null, code,
+      customer_id: customerId,
     }).select("id,token,code").single();
-    if (error) throw new Error("Impossibile completare la prenotazione");
+    if (isOverlapError(error)) throw new Error(OVERLAP_MESSAGE);
+    if (error || !row) throw new Error("Impossibile completare la prenotazione");
 
     // Conferma automatica su WhatsApp dal numero del salone.
     const { sendWhatsAppText } = await import("./whatsapp.server");

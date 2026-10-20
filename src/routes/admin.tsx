@@ -352,7 +352,7 @@ function ApptCard({ a, onOpen, onChange }: { a: Appt; onOpen: () => void; onChan
 }
 
 function AppointmentForm({ appt, date, barbers, services, links, customers, onDone }: {
-  appt?: Appt; date: string; barbers: Barber[]; services: Service[]; links: Link[]; customers: Customer[]; onDone: () => void;
+  appt?: Appt | undefined; date: string; barbers: Barber[]; services: Service[]; links: Link[]; customers: Customer[]; onDone: () => void;
 }) {
   const [customerId, setCustomerId] = useState(appt?.customer_id ?? "");
   const [query, setQuery] = useState("");
@@ -376,7 +376,7 @@ function AppointmentForm({ appt, date, barbers, services, links, customers, onDo
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!barberOk) return toast.error("Scegli un professionista abilitato al servizio");
+    if (!barberOk) { toast.error("Scegli un professionista abilitato al servizio"); return; }
     setBusy(true);
     try {
       let id = customerId;

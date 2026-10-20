@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const normalizePhone = (p: string) => p.replace(/\D/g, "");
 
-type CustomerInput = { firstName: string; lastName: string; email?: string | null; phone?: string | null; birthDate?: string | null };
+type CustomerInput = { firstName: string; lastName: string; email?: string | null | undefined; phone?: string | null | undefined; birthDate?: string | null | undefined };
 
 /**
  * Trova il cliente per email o telefono (normalizzato) e lo aggiorna, altrimenti lo crea.
@@ -21,10 +21,10 @@ export async function upsertCustomer(input: CustomerInput) {
     const { data } = await supabaseAdmin.from("customers").select("id").eq("phone_normalized", digits).maybeSingle();
     existingId = data?.id ?? null;
   }
-  const patch: Record<string, unknown> = { first_name: input.firstName, last_name: input.lastName };
-  if (email) patch["email"] = email;
-  if (phone) patch["phone"] = phone;
-  if (input.birthDate) patch["birth_date"] = input.birthDate;
+  const patch: { first_name: string; last_name: string; email?: string; phone?: string; birth_date?: string } = { first_name: input.firstName, last_name: input.lastName };
+  if (email) patch.email = email;
+  if (phone) patch.phone = phone;
+  if (input.birthDate) patch.birth_date = input.birthDate;
   if (existingId) {
     const { error } = await supabaseAdmin.from("customers").update(patch).eq("id", existingId);
     if (error) throw new Error(error.code === "23505" ? "Email o telefono già associati a un altro cliente" : "Impossibile aggiornare il cliente");

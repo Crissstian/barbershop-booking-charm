@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { NewReward } from "@/lib/membership.server";
+import type { NewReward } from "@/lib/membership-rules";
 
 function headline(r: NewReward) {
   if (r.type === "hairspray") return { title: "Traguardo raggiunto", body: `${r.customerName} ha completato ${r.threshold} tagli.` };

@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { expectedRewards, REWARD_LABEL, type CompletedVisit } from "./membership-rules";
+import { expectedRewards, REWARD_LABEL, type CompletedVisit, type NewReward } from "./membership-rules";
+export type { NewReward };
 import { todayRome } from "./booking.server";
 
-export type NewReward = { customerName: string; type: keyof typeof REWARD_LABEL; label: string; threshold: number | null; year: number | null };
 
 export async function customerVisits(customerId: string) {
   const { data } = await supabaseAdmin.from("appointments").select("starts_at,status,services(counts_as_haircut)").eq("customer_id", customerId).eq("status", "completed");

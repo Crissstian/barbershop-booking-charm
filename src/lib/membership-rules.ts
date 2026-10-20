@@ -41,3 +41,5 @@ export function progress(visits: CompletedVisit[], today: string) {
   const thisYear = dates.filter((d) => d.startsWith(year)).length;
   return { total: dates.length, thisYear, hairspray: dates.length % HAIRSPRAY_EVERY, annual: Math.min(thisYear, ANNUAL_TARGET) };
 }
+
+export type NewReward = { customerName: string; type: RewardType; label: string; threshold: number | null; year: number | null };

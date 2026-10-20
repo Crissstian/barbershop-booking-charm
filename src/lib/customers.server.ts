@@ -1,6 +1,12 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const normalizePhone = (p: string) => p.replace(/\D/g, "");
+/** Varianti con/senza prefisso italiano, per riconoscere lo stesso numero scritto in modi diversi. */
+export function phoneVariants(p: string) {
+  const d = normalizePhone(p).replace(/^00/, "");
+  const local = d.startsWith("39") && d.length >= 11 ? d.slice(2) : d;
+  return [...new Set([d, local, "39" + local].filter(Boolean))];
+}
 
 type CustomerInput = { firstName: string; lastName: string; email?: string | null | undefined; phone?: string | null | undefined; birthDate?: string | null | undefined };
 
@@ -18,7 +24,7 @@ export async function upsertCustomer(input: CustomerInput) {
     existingId = data?.id ?? null;
   }
   if (!existingId && digits) {
-    const { data } = await supabaseAdmin.from("customers").select("id").eq("phone_normalized", digits).maybeSingle();
+    const { data } = await supabaseAdmin.from("customers").select("id").in("phone_normalized", phoneVariants(phone)).limit(1).maybeSingle();
     existingId = data?.id ?? null;
   }
   const patch: { first_name: string; last_name: string; email?: string; phone?: string; birth_date?: string } = { first_name: input.firstName, last_name: input.lastName };

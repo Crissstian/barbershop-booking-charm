@@ -8,15 +8,8 @@ import { SplitText } from "@/components/split-text";
 import { Tilt } from "@/components/tilt-card";
 import { SALON, waLink } from "@/lib/salon";
 
-import nicolaPortrait from "@/assets/staff/barber-nicola.jpg.asset.json";
-import danielePortrait from "@/assets/staff/barber-daniele.jpg.asset.json";
-import antonioPortrait from "@/assets/staff/barber-antonio.jpg.asset.json";
-import alessiaPortrait from "@/assets/staff/barber-alessia.jpg.asset.json";
+import { portraitFor } from "@/lib/portraits";
 import salonHero from "@/assets/salon-hero-light.jpg";
-
-/** Ritratti locali per slug: indipendenti dall'ordinamento. photo_url dal database ha la precedenza. */
-const PORTRAITS: Record<string, string> = { nicola: nicolaPortrait.url, antonio: antonioPortrait.url, daniele: danielePortrait.url, alessia: alessiaPortrait.url };
-const portraitFor = (b: { slug: string | null; photo_url: string | null }) => b.photo_url || (b.slug ? PORTRAITS[b.slug] : undefined);
 
 export const catalogQuery = queryOptions({ queryKey: ["catalog"], queryFn: () => getCatalog(), staleTime: 30_000 });
 

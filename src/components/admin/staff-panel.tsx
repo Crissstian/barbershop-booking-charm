@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { addAdminBlock, removeAdminBlock, saveAdminBarber, saveAdminHours } from "@/lib/admin-ops.functions";
 import { uploadImage } from "@/lib/upload";
 import { romeDate, fmtTime } from "@/lib/format";
+import { portraitFor } from "@/lib/portraits";
 
 const field = "w-full border bg-card px-3 py-2 text-sm outline-none focus:border-accent";
 export const WEEKDAYS = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
@@ -98,7 +99,7 @@ function StaffEditor({ s, staff, services, links, hours, onDone }: {
         <label className="block text-sm">Ruolo<input value={f.role_title} onChange={(e) => setF({ ...f, role_title: e.target.value })} className={`${field} mt-1`} /></label>
         <label className="block text-sm">Bio (facoltativa)<textarea rows={3} value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} className={`${field} mt-1`} /></label>
         <div className="flex items-center gap-4">
-          <div className="h-20 w-16 shrink-0 overflow-hidden border bg-secondary">{f.photo_url && <img src={f.photo_url} alt="" className="h-full w-full object-cover" />}</div>
+          <div className="h-20 w-16 shrink-0 overflow-hidden border bg-secondary">{portraitFor({ slug: s.slug, photo_url: f.photo_url || null }) && <img src={portraitFor({ slug: s.slug, photo_url: f.photo_url || null })} alt="" className="h-full w-full object-cover" />}</div>
           <div className="space-y-1 text-sm">
             <label className="inline-block cursor-pointer border px-3 py-2 text-xs uppercase tracking-[0.2em]">Cambia foto<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => photo(e.target.files?.[0])} /></label>
             {f.photo_url ? <button type="button" onClick={() => setF({ ...f, photo_url: "" })} className="block text-xs underline">Usa la foto ufficiale</button> : <p className="text-xs text-muted-foreground">Foto ufficiale del sito</p>}

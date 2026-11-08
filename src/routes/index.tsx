@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getCatalog } from "@/lib/booking.functions";
 import { fmtShort, fmtTime, servicePrice } from "@/lib/format";
-import logo from "@/assets/ndp-logo.png.asset.json";
+const logo = { url: "/media/ndp-logo.png" };
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { SplitText } from "@/components/split-text";
 import { Tilt } from "@/components/tilt-card";

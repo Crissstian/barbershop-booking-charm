@@ -1,8 +1,12 @@
-import nicola from "@/assets/staff/barber-nicola.jpg.asset.json";
-import antonio from "@/assets/staff/barber-antonio.jpg.asset.json";
-import daniele from "@/assets/staff/barber-daniele.jpg.asset.json";
-import alessia from "@/assets/staff/barber-alessia.jpg.asset.json";
+/** Percorsi locali: indipendenti dal CDN dell'editor Lovable. */
+const PORTRAITS: Record<string, string> = {
+  nicola: "/media/staff/barber-nicola.jpg",
+  antonio: "/media/staff/barber-antonio.jpg",
+  daniele: "/media/staff/barber-daniele.jpg",
+  alessia: "/media/staff/barber-alessia.jpg",
+};
 
-/** Foto ufficiali per slug: photo_url dal database ha sempre la precedenza. */
-const PORTRAITS: Record<string, string> = { nicola: nicola.url, antonio: antonio.url, daniele: daniele.url, alessia: alessia.url };
-export const portraitFor = (b: { slug: string | null; photo_url: string | null }) => b.photo_url || (b.slug ? PORTRAITS[b.slug] : undefined);
+/** Una fotografia personalizzata caricata da Nicola ha la precedenza. */
+export function portraitFor(barber: { slug: string | null; photo_url: string | null }): string | undefined {
+  return barber.photo_url || (barber.slug ? PORTRAITS[barber.slug] : undefined);
+}

@@ -1,0 +1,28 @@
+name: NDP - verifica codice
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  tests-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+      - name: Installa dipendenze
+        run: bun install --frozen-lockfile
+      - name: Test unitari
+        run: bunx vitest run
+      - name: Compila progetto SSR
+        run: bun run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_not_real
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_not_real
+          SUPABASE_SERVICE_ROLE_KEY: ci_placeholder_not_real
